@@ -49,14 +49,14 @@
 
 | 任务编号 | 任务名称 | 状态 | 备注 |
 |---------|---------|------|------|
-| B1 | LLM 抽象接口与工厂（Qwen/OpenAI/Ollama） | [ ] | `BaseLLM` + `LLMFactory`，支持 Qwen-Max 默认实现 |
-| B2 | Vision LLM 抽象接口与工厂（Qwen-VL/GPT-4V） | [ ] | `BaseVisionLLM` + `VisionLLMFactory`，支持 Qwen-VL-Max |
-| B3 | Embedding 抽象接口与工厂（通义/OpenAI/Ollama） | [ ] | `BaseEmbedding` + `EmbeddingFactory`，通义文本向量默认 |
-| B4 | VectorStore 抽象接口与工厂（Chroma/Qdrant） | [ ] | `BaseVectorStore` + `VectorStoreFactory`，Chroma 默认 |
-| B5 | Splitter 抽象接口与工厂（Recursive/Semantic） | [ ] | `BaseSplitter` + `SplitterFactory`，RecursiveSplitter 默认 |
-| B6 | Reranker 抽象接口与工厂（BGE/LLM/None） | [ ] | `BaseReranker` + `RerankerFactory`，BGE reranker 默认 |
-| B7 | Memory 抽象接口与工厂 | [ ] | `BaseMemory`（短期/长期/情景），支持 SQLite + Chroma 默认 |
-| B8 | HIS 抽象接口与工厂（Mock/HTTP） | [ ] | `BaseHISClient` + `HISFactory`，MockHISClient 默认（SQLite） |
+| B1 | LLM 抽象接口与工厂（Qwen/OpenAI/Ollama） | [x] | `BaseLLM` + `LLMFactory`，支持 Qwen-Max 默认实现 |
+| B2 | Vision LLM 抽象接口与工厂（Qwen-VL/GPT-4V） | [x] | `BaseVisionLLM` + `VisionLLMFactory`，支持 Qwen-VL-Max |
+| B3 | Embedding 抽象接口与工厂（通义/OpenAI/Ollama） | [x] | `BaseEmbedding` + `EmbeddingFactory`，通义文本向量默认 |
+| B4 | VectorStore 抽象接口与工厂（Chroma/Qdrant） | [x] | `BaseVectorStore` + `VectorStoreFactory`，Chroma 默认 |
+| B5 | Splitter 抽象接口与工厂（Recursive/Semantic） | [x] | `BaseSplitter` + `SplitterFactory`，RecursiveSplitter 默认 |
+| B6 | Reranker 抽象接口与工厂（BGE/LLM/None） | [x] | `BaseReranker` + `RerankerFactory`，BGE reranker 默认 |
+| B7 | Memory 抽象接口与工厂 | [x] | `BaseMemory`（短期/长期/情景），支持 SQLite + Chroma 默认 |
+| B8 | HIS 抽象接口与工厂（Mock/HTTP） | [x] | `BaseHISClient` + `HISFactory`，MockHISClient 默认（SQLite） |
 
 ---
 
