@@ -1340,7 +1340,7 @@ dashboard:
 
 | 任务编号 | 任务名称 | 状态 | 备注 |
 |---------|---------|------|------|
-| D1 | RAG Engine 完整实现 | [ ] | QueryProcessor、HybridSearch、Reranker 集成（依赖 B3,B4,B6） |
+| D1 | RAG Engine 完整实现 | [x] | QueryProcessor、HybridSearch、Reranker 集成（依赖 B3,B4,B6） |
 | D2 | HIS Orchestrator 基础实现 | [ ] | DepartmentService、ScheduleService（依赖 B8） |
 | D3 | Case Generator 基础实现 | [ ] | EntityExtractor、RecordBuilder、SchemaValidator |
 | D4 | BookingService 框架（事务预留） | [ ] | 挂号服务框架，并发锁号逻辑后续细化 |
@@ -1467,7 +1467,7 @@ dashboard:
 | 阶段 A | 3 | 3 | 100% |
 | 阶段 B | 8 | 8 | 100% |
 | 阶段 C | 9 | 9 | 100% |
-| 阶段 D | 4 | 0 | 0% |
+| 阶段 D | 4 | 1 | 25% |
 | 阶段 E | 7 | 0 | 0% |
 | 阶段 F | 6 | 0 | 0% |
 | 阶段 G | 5 | 0 | 0% |
