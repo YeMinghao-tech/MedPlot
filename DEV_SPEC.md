@@ -1404,11 +1404,11 @@ dashboard:
 
 | 任务编号 | 任务名称 | 状态 | 备注 |
 |---------|---------|------|------|
-| I1 | Mock HIS 数据库初始化 | [ ] | departments、doctors、schedules、appointments 表 |
-| I2 | SQLite WAL 模式配置 | [ ] | `PRAGMA journal_mode=WAL`，timeout 设置 |
-| I3 | BookingService 完整事务实现 | [ ] | 扣减号源 + 插入订单，原子操作 |
-| I4 | 并发锁号测试 | [ ] | `asyncio.gather` 模拟 10 并发抢占同一号源 |
-| I5 | 挂号完整流程集成测试 | [ ] | 选科室 → 选医生 → 选时间 → 锁号 → 返回凭证 |
+| I1 | Mock HIS 数据库初始化 | [x] | departments、doctors、schedules、appointments 表 |
+| I2 | SQLite WAL 模式配置 | [x] | `PRAGMA journal_mode=WAL`，timeout 设置 |
+| I3 | BookingService 完整事务实现 | [x] | 扣减号源 + 插入订单，原子操作 |
+| I4 | 并发锁号测试 | [x] | `asyncio.gather` 模拟 10 并发抢占同一号源 |
+| I5 | 挂号完整流程集成测试 | [x] | 选科室 → 选医生 → 选时间 → 锁号 → 返回凭证 |
 
 ---
 
@@ -1472,7 +1472,7 @@ dashboard:
 | 阶段 F | 6 | 6 | 100% |
 | 阶段 G | 5 | 5 | 100% |
 | 阶段 H | 7 | 7 | 100% |
-| 阶段 I | 5 | 0 | 0% |
+| 阶段 I | 5 | 5 | 100% |
 | 阶段 J | 9 | 0 | 0% |
 | 阶段 K | 8 | 0 | 0% |
 | 阶段 L | 8 | 0 | 0% |

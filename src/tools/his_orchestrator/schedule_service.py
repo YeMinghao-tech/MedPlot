@@ -115,12 +115,7 @@ class ScheduleService:
         Returns:
             Schedule if found, None otherwise.
         """
-        # This is a bit inefficient but MockHISClient doesn't expose get_by_id
-        schedules = self.his_client.query_doctor_schedule("")
-        for schedule in schedules:
-            if schedule.schedule_id == schedule_id:
-                return schedule
-        return None
+        return self.his_client.get_schedule_by_id(schedule_id)
 
     def enrich_schedule(self, schedule: Schedule) -> ScheduleInfo:
         """Enrich a schedule with computed fields.

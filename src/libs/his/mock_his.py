@@ -132,22 +132,38 @@ class MockHISClient(BaseHISClient):
             ]
 
     def query_doctor_schedule(
-        self, dept_name: str, date: Optional[str] = None
+        self, dept_name: str = "", date: Optional[str] = None
     ) -> List[Schedule]:
-        """Query doctor schedules for a department."""
+        """Query doctor schedules for a department.
+
+        Args:
+            dept_name: Department name filter (empty string returns all).
+            date: Optional date filter.
+        """
         with self._lock:
             conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            if date:
+            if dept_name and date:
                 cursor = conn.execute(
                     """SELECT schedule_id, doctor_name, dept_name, date, time_slot, available_slots
                        FROM schedules WHERE dept_name = ? AND date = ?""",
                     (dept_name, date),
                 )
-            else:
+            elif dept_name:
                 cursor = conn.execute(
                     """SELECT schedule_id, doctor_name, dept_name, date, time_slot, available_slots
                        FROM schedules WHERE dept_name = ?""",
                     (dept_name,),
+                )
+            elif date:
+                cursor = conn.execute(
+                    """SELECT schedule_id, doctor_name, dept_name, date, time_slot, available_slots
+                       FROM schedules WHERE date = ?""",
+                    (date,),
+                )
+            else:
+                cursor = conn.execute(
+                    """SELECT schedule_id, doctor_name, dept_name, date, time_slot, available_slots
+                       FROM schedules"""
                 )
             rows = cursor.fetchall()
             conn.close()
@@ -163,17 +179,53 @@ class MockHISClient(BaseHISClient):
                 for row in rows
             ]
 
+    def get_schedule_by_id(self, schedule_id: str) -> Optional[Schedule]:
+        """Get a schedule by its ID.
+
+        Args:
+            schedule_id: Schedule identifier.
+
+        Returns:
+            Schedule if found, None otherwise.
+        """
+        with self._lock:
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            cursor = conn.execute(
+                """SELECT schedule_id, doctor_name, dept_name, date, time_slot, available_slots
+                   FROM schedules WHERE schedule_id = ?""",
+                (schedule_id,),
+            )
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                return Schedule(
+                    schedule_id=row[0],
+                    doctor_name=row[1],
+                    dept_name=row[2],
+                    date=row[3],
+                    time_slot=row[4],
+                    available_slots=row[5],
+                )
+            return None
+
     def book_appointment(
         self, patient_id: str, schedule_id: str
     ) -> AppointmentResult:
-        """Book an appointment with transaction support."""
+        """Book an appointment with atomic transaction support.
+
+        Uses BEGIN IMMEDIATE to acquire a write lock at the start of the
+        transaction, preventing race conditions in concurrent booking.
+        """
         with self._lock:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            conn = sqlite3.connect(self.db_path, check_same_thread=False, isolation_level=None)
             if self.use_wal:
                 conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute("PRAGMA busy_timeout=5000")
+            conn.execute("PRAGMA busy_timeout=10000")
 
             try:
+                # BEGIN IMMEDIATE acquires write lock immediately
+                conn.execute("BEGIN IMMEDIATE")
+
                 # Check if schedule exists and has availability
                 cursor = conn.execute(
                     "SELECT available_slots FROM schedules WHERE schedule_id = ?",
@@ -181,9 +233,11 @@ class MockHISClient(BaseHISClient):
                 )
                 row = cursor.fetchone()
                 if not row:
+                    conn.execute("ROLLBACK")
                     conn.close()
                     return AppointmentResult(success=False, message="Schedule not found")
                 if row[0] <= 0:
+                    conn.execute("ROLLBACK")
                     conn.close()
                     return AppointmentResult(success=False, message="No available slots")
 
@@ -200,7 +254,7 @@ class MockHISClient(BaseHISClient):
                     (schedule_id,),
                 )
 
-                conn.commit()
+                conn.execute("COMMIT")
                 conn.close()
                 return AppointmentResult(
                     success=True,
@@ -208,8 +262,14 @@ class MockHISClient(BaseHISClient):
                     message="Appointment booked successfully",
                 )
             except sqlite3.IntegrityError:
+                conn.execute("ROLLBACK")
                 conn.close()
                 return AppointmentResult(success=False, message="Already booked")
+            except sqlite3.OperationalError as e:
+                conn.execute("ROLLBACK")
+                conn.close()
+                return AppointmentResult(success=False, message=f"Booking failed: {str(e)}")
             except Exception as e:
+                conn.execute("ROLLBACK")
                 conn.close()
                 return AppointmentResult(success=False, message=str(e))
