@@ -50,6 +50,7 @@ class QwenLLM(BaseLLM):
             import os
 
             os.environ["DASHSCOPE_API_KEY"] = self.api_key
+            dashscope.api_key = self.api_key
 
         response = dashscope.Generation.call(
             model=self.model,

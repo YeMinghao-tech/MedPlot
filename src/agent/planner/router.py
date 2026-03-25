@@ -162,22 +162,34 @@ class Router:
         )
 
     def _handle_knowledge_query(self, query: str) -> str:
-        """Handle medical knowledge query via RAG."""
-        if not self.rag_engine:
-            return "抱歉，医学知识库暂不可用。建议您直接咨询医生获取准确信息。"
+        """Handle medical knowledge query via RAG or LLM."""
+        # Try RAG first if available
+        if self.rag_engine:
+            try:
+                results = self.rag_engine.query(query, top_k=3)
+                if results:
+                    response_parts = ["根据医学资料：\n"]
+                    for i, r in enumerate(results[:3], 1):
+                        response_parts.append(f"{i}. {r.text[:200]}...")
+                    return "\n".join(response_parts)
+            except Exception:
+                pass  # Fall through to LLM
 
-        try:
-            results = self.rag_engine.query(query, top_k=3)
-            if not results:
-                return "抱歉，我在医学知识库中没有找到相关信息，建议您咨询医生。"
+        # Fall back to LLM if RAG not available or failed
+        if self.llm:
+            try:
+                prompt = f"""你是一个专业的医疗知识顾问。请回答以下医学问题：
 
-            # Format response
-            response_parts = ["根据医学资料：\n"]
-            for i, r in enumerate(results[:3], 1):
-                response_parts.append(f"{i}. {r.text[:200]}...")
-            return "\n".join(response_parts)
-        except Exception as e:
-            return f"查询医学知识时出现错误：{str(e)}"
+问题：{query}
+
+请用专业但易懂的中文回答，如果涉及诊断或治疗建议，请提醒患者咨询专业医生。"""
+
+                response = self.llm.chat([{"role": "user", "content": prompt}])
+                return response.strip()
+            except Exception as e:
+                return f"查询医学知识时出现错误：{str(e)}"
+
+        return "抱歉，医学知识库暂不可用。建议您直接咨询医生获取准确信息。"
 
     def _handle_booking(self, query: str, patient_id: Optional[str]) -> str:
         """Handle appointment booking request."""
@@ -219,13 +231,45 @@ class Router:
         return "好的，我明白了。"
 
     def _handle_consultation(self, query: str, patient_state) -> str:
-        """Handle medical consultation."""
+        """Handle medical consultation using LLM when available."""
         # Update patient state with new symptoms
         if patient_state:
             patient_state.add_symptom(query)
 
+        # Try to use LLM for more natural response
+        if self.llm:
+            try:
+                conversation_history = ""
+                if patient_state and hasattr(patient_state, 'symptoms'):
+                    conversation_history = f"当前已收集症状: {', '.join(patient_state.symptoms) if patient_state.symptoms else '无'}"
+
+                prompt = f"""你是一个专业的医疗问诊助手。患者说：{query}
+
+{conversation_history}
+
+请用自然、亲切的中文回复，引导患者继续描述症状或询问相关问题。不要列出选项，直接回复。"""
+
+                print(f"[DEBUG] _handle_consultation: calling LLM with prompt...")
+                response = self.llm.chat([{"role": "user", "content": prompt}])
+                print(f"[DEBUG] _handle_consultation: LLM response received: {response[:100]}...")
+                return response.strip()
+            except Exception as e:
+                print(f"[ERROR] _handle_consultation: LLM call failed: {e}")
+                import traceback
+                traceback.print_exc()
+                # Fall through to rule-based response
+                return f"[LLM错误: {e}] " + (
+                    f"了解了。{len(patient_state.symptoms) if patient_state and patient_state.symptoms else 0}个症状已记录。\n"
+                    "请继续描述：\n"
+                    "- 症状持续多长时间了？\n"
+                    "- 严重程度如何（轻微/中等/严重）？\n"
+                    "- 还有其他不舒服的地方吗？"
+                )
+
+        # Fallback to rule-based response
+        print(f"[DEBUG] _handle_consultation: using fallback response (llm={self.llm})")
         return (
-            f"了解了。{len(patient_state.symptoms)}个症状已记录。\n"
+            f"了解了。{len(patient_state.symptoms) if patient_state and patient_state.symptoms else 0}个症状已记录。\n"
             "请继续描述：\n"
             "- 症状持续多长时间了？\n"
             "- 严重程度如何（轻微/中等/严重）？\n"
