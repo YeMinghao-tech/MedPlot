@@ -5,6 +5,7 @@ from typing import Optional, Dict, Any
 
 from src.agent.planner.intent_classifier import Intent, IntentClassifier
 from src.agent.planner.state_manager import State, StateManager
+from src.core.trace import TraceContext, get_current_trace
 
 
 @dataclass
@@ -56,32 +57,55 @@ class Router:
         self.classifier = IntentClassifier(llm_client=llm_client)
         self.state_manager = StateManager()
 
-    def route(self, user_input: str, patient_id: Optional[str] = None) -> Dict[str, Any]:
+    def route(
+        self,
+        user_input: str,
+        patient_id: Optional[str] = None,
+        trace: Optional[TraceContext] = None,
+    ) -> Dict[str, Any]:
         """Route user input to appropriate tool and execute.
 
         Args:
             user_input: User's input text.
             patient_id: Optional patient identifier.
+            trace: Optional trace context for observability.
 
         Returns:
             Dict with response and tool call info.
         """
-        # Step 1: Classify intent
+        # Use provided trace or get current one
+        trace = trace or get_current_trace()
+
+        # Step 1: Classify intent (J3: Agent链路打点)
+        intent_span = None
+        if trace:
+            intent_span = trace.start_span("intent_classification")
         intent_result = self.classifier.classify(user_input)
+        if trace and intent_span:
+            trace.end_span(intent_span, {"intent": intent_result.intent.value, "confidence": intent_result.confidence})
+
         intent = intent_result.intent
 
-        # Step 2: Get context for state transition
+        # Step 2: Get context for state transition (J3: State transition)
+        state_span = None
+        if trace:
+            state_span = trace.start_span("state_transition")
         context = {
             "patient_id": patient_id,
             "patient_state": self.state_manager.patient_state,
         }
-
-        # Step 3: Transition state
         new_state = self.state_manager.transition(intent, context)
         current_state = self.state_manager.get_state()
+        if trace and state_span:
+            trace.end_span(state_span, {"new_state": new_state.value})
 
-        # Step 4: Generate response based on intent + state
+        # Step 3: Generate response (J3: Tool routing)
+        tool_span = None
+        if trace:
+            tool_span = trace.start_span("tool_routing", metadata={"intent": intent.value})
         response = self._generate_response(intent, new_state, user_input, context)
+        if trace and tool_span:
+            trace.end_span(tool_span, {"response_length": len(response)})
 
         return {
             "intent": intent.value,
@@ -89,6 +113,7 @@ class Router:
             "state": new_state.value,
             "response": response,
             "patient_state": self.state_manager.patient_state,
+            "trace_id": trace.trace_id if trace else None,
         }
 
     def _generate_response(

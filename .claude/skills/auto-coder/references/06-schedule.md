@@ -163,17 +163,17 @@
 
 | 任务编号 | 任务名称 | 状态 | 备注 |
 |---------|---------|------|------|
-| J1 | TraceContext 实现 | [ ] | trace_id 生成，阶段记录，finish 汇总 |
-| J2 | 结构化日志（JSON Lines） | [ ] | `logs/traces.jsonl`、`logs/audit_logs.jsonl` |
-| J3 | 在 Agent 链路打点 | [ ] | 意图识别、状态转移、工具调用各阶段 |
-| J4 | 在 Ingestion 链路打点 | [ ] | load/split/transform/embed/upsert 各阶段 |
-| J5 | Dashboard 基础架构（Streamlit） | [ ] | `app.py` 多页面导航 |
-| J6 | 系统总览页（Overview） | [ ] | 组件配置、数据统计 |
-| J7 | 知识库浏览器（Data Browser） | [ ] | 文档列表、Chunk 详情、图片预览 |
-| J8 | 记忆查看器（Memory Viewer） | [ ] | 患者档案、历史就诊记录（脱敏） |
-| J9 | 问诊追踪页（Query Traces） | [ ] | 历史列表、耗时瀑布图、工具调用链 |
-| J10 | 知识库质量面板（Medical KB Quality） | [ ] | 检索命中率、Faithfulness 趋势 |
-| J11 | 审计日志页（Audit Logs） | [ ] | 按患者 ID、操作类型筛选，决策溯源 |
+| J1 | TraceContext 实现 | [x] | trace_id 生成，阶段记录，finish 汇总 |
+| J2 | 结构化日志（JSON Lines） | [x] | `logs/traces.jsonl`、`logs/audit_logs.jsonl` |
+| J3 | 在 Agent 链路打点 | [x] | 意图识别、状态转移、工具调用各阶段 |
+| J4 | 在 Ingestion 链路打点 | [x] | load/split/transform/embed/upsert 各阶段 |
+| J5 | Dashboard 基础架构（Streamlit） | [x] | `app.py` 多页面导航 |
+| J6 | 系统总览页（Overview） | [x] | 组件配置、数据统计 |
+| J7 | 知识库浏览器（Data Browser） | [x] | 文档列表、Chunk 详情、图片预览 |
+| J8 | 记忆查看器（Memory Viewer） | [x] | 患者档案、历史就诊记录（脱敏） |
+| J9 | 问诊追踪页（Query Traces） | [x] | 历史列表、耗时瀑布图、工具调用链 |
+| J10 | 知识库质量面板（Medical KB Quality） | [x] | 检索命中率、Faithfulness 趋势 |
+| J11 | 审计日志页（Audit Logs） | [x] | 按患者 ID、操作类型筛选，决策溯源 |
 
 ---
 
@@ -220,7 +220,7 @@
 | 阶段 G | 5 | 5 | 100% |
 | 阶段 H | 7 | 7 | 100% |
 | 阶段 I | 5 | 5 | 100% |
-| 阶段 J | 9 | 0 | 0% |
+| 阶段 J | 9 | 9 | 100% |
 | 阶段 K | 8 | 0 | 0% |
 | 阶段 L | 8 | 0 | 0% |
 | **总计** | **87** | **25** | **29%** |
