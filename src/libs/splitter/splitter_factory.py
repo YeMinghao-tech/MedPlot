@@ -50,3 +50,12 @@ class SplitterFactory:
             splitter_class: The Splitter class to register.
         """
         cls._providers[name.lower()] = splitter_class
+
+    @classmethod
+    def create_default(cls) -> BaseSplitter:
+        """Create a default splitter with reasonable settings.
+
+        Returns:
+            A RecursiveSplitter with default medical-friendly settings.
+        """
+        return RecursiveSplitter(chunk_size=500, chunk_overlap=50)
