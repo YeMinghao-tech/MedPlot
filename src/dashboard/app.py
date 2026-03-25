@@ -28,6 +28,7 @@ def main():
         "选择页面",
         [
             "📊 系统总览",
+            "💬 在线问诊",
             "📚 知识库浏览器",
             "🧠 记忆查看器",
             "🔍 问诊追踪",
@@ -40,6 +41,8 @@ def main():
     # Route to selected page
     if page == "📊 系统总览":
         overview_page()
+    elif page == "💬 在线问诊":
+        chat_page()
     elif page == "📚 知识库浏览器":
         knowledge_browser_page()
     elif page == "🧠 记忆查看器":
@@ -52,6 +55,104 @@ def main():
         evaluation_panel_page()
     elif page == "📋 审计日志":
         audit_logs_page()
+
+
+def chat_page():
+    """Interactive chat page for patient consultation."""
+    import requests
+
+    st.header("💬 在线问诊")
+    st.markdown("与医疗导诊助手对话，描述您的症状")
+
+    # Session management
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = None
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    # API base URL (use WSL/host IP for cross-environment access)
+    API_BASE = "http://172.25.198.195:8000"
+
+    # Patient ID input
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        patient_id = st.text_input("患者ID", value="demo_patient", key="patient_id_input")
+
+    with col2:
+        if st.button("开始新会话") or not st.session_state.session_id:
+            try:
+                st.info(f"正在连接 {API_BASE}...")
+                resp = requests.post(f"{API_BASE}/sessions", params={"patient_id": patient_id}, timeout=10)
+                st.info(f"响应状态: {resp.status_code}")
+                if resp.status_code in (200, 201):
+                    data = resp.json()
+                    st.session_state.session_id = data.get("session_id")
+                    st.session_state.messages = []
+                    st.success(f"会话已创建: {st.session_state.session_id[:8]}...")
+                else:
+                    st.error(f"创建会话失败: {resp.status_code} - {resp.text}")
+            except Exception as e:
+                st.error(f"无法连接 API 服务器: {e}")
+                st.info("请确保 API 服务器正在运行: uvicorn src.api.app:create_app --factory")
+
+    # Display chat history
+    st.divider()
+    st.subheader("对话记录")
+
+    for msg in st.session_state.messages:
+        if msg["role"] == "user":
+            st.chat_message("user").write(msg["content"])
+        else:
+            st.chat_message("assistant").write(msg["content"])
+
+    # Chat input
+    if prompt := st.chat_input("输入您的症状或问题..."):
+        if not st.session_state.session_id:
+            st.error("请先创建会话")
+            return
+
+        # Add user message
+        st.chat_message("user").write(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+        # Send to API
+        try:
+            resp = requests.post(
+                f"{API_BASE}/chat/{st.session_state.session_id}",
+                json={"content": prompt},
+                timeout=30
+            )
+
+            if resp.status_code == 200:
+                data = resp.json()
+                response = data.get("response", "无响应")
+                intent = data.get("intent", "unknown")
+
+                # Display assistant response
+                with st.chat_message("assistant"):
+                    st.write(response)
+                    st.caption(f"意图: {intent}")
+
+                st.session_state.messages.append({"role": "assistant", "content": response})
+
+            elif resp.status_code == 404:
+                st.error("会话不存在，请开始新会话")
+                st.session_state.session_id = None
+            else:
+                st.error(f"请求失败: {resp.status_code}")
+
+        except Exception as e:
+            st.error(f"请求出错: {e}")
+
+    # Sidebar: clear history button
+    with st.sidebar:
+        st.subheader("会话操作")
+        if st.button("清空对话记录"):
+            st.session_state.messages = []
+            st.rerun()
+
+        if st.session_state.session_id:
+            st.info(f"会话ID: {st.session_state.session_id[:12]}...")
 
 
 def overview_page():
