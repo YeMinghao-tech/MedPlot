@@ -50,3 +50,5 @@ Thumbs.db
 # Local config (if any)
 *.local
 settings.local.json
+config/settings.yaml
+config/secrets.yaml
