@@ -98,13 +98,13 @@
 
 | 任务编号 | 任务名称 | 状态 | 备注 |
 |---------|---------|------|------|
-| E1 | IntentClassifier（意图识别） | [ ] | 问诊/挂号/科普/确认/红线拦截，规则 + LLM |
-| E2 | StateManager（对话状态机） | [ ] | 状态转移图：症状收集→科室推荐→病历确认→挂号 |
-| E3 | Router（工具路由） | [ ] | **根据意图和状态调度 D 阶段已实现的工具**（RAG/HIS/CaseGenerator） |
-| E4 | WorkingMemory（短期工作记忆） | [ ] | 维护 `PatientState`（symptom_tree、message_history） |
-| E5 | SemanticMemory（长期语义记忆） | [ ] | SQLite 患者档案，Upsert 更新 |
-| E6 | EpisodicMemory（历史情景记忆） | [ ] | 向量检索 + SQLite 元数据 |
-| E7 | MemoryFactory（记忆工厂） | [ ] | 支持配置切换后端 |
+| E1 | IntentClassifier（意图识别） | [x] | 问诊/挂号/科普/确认/红线拦截，规则 + LLM |
+| E2 | StateManager（对话状态机） | [x] | 状态转移图：症状收集→科室推荐→病历确认→挂号 |
+| E3 | Router（工具路由） | [x] | **根据意图和状态调度 D 阶段已实现的工具**（RAG/HIS/CaseGenerator） |
+| E4 | WorkingMemory（短期工作记忆） | [x] | 维护 `PatientState`（symptom_tree、message_history） |
+| E5 | SemanticMemory（长期语义记忆） | [x] | SQLite 患者档案，Upsert 更新 |
+| E6 | EpisodicMemory（历史情景记忆） | [x] | 向量检索 + SQLite 元数据 |
+| E7 | MemoryFactory（记忆工厂） | [x] | 支持配置切换后端 |
 
 ---
 
@@ -214,7 +214,7 @@
 | 阶段 A | 3 | 3 | 100% |
 | 阶段 B | 8 | 8 | 100% |
 | 阶段 C | 9 | 9 | 100% |
-| 阶段 D | 4 | 3 | 75% |
+| 阶段 D | 4 | 4 | 100% |
 | 阶段 E | 7 | 0 | 0% |
 | 阶段 F | 6 | 0 | 0% |
 | 阶段 G | 5 | 0 | 0% |
