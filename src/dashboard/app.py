@@ -33,6 +33,7 @@ def main():
             "🔍 问诊追踪",
             "📈 知识库质量",
             "📋 审计日志",
+            "✅ 评估面板",
         ],
     )
 
@@ -47,6 +48,8 @@ def main():
         query_traces_page()
     elif page == "📈 知识库质量":
         quality_page()
+    elif page == "✅ 评估面板":
+        evaluation_panel_page()
     elif page == "📋 审计日志":
         audit_logs_page()
 
@@ -189,6 +192,64 @@ def quality_page():
     dates = ["03-19", "03-20", "03-21", "03-22", "03-23", "03-24", "03-25"]
     hit_rates = [91.2, 92.5, 93.1, 92.8, 94.5, 93.9, 94.2]
     st.line_chart(pd.DataFrame({"日期": dates, "命中率": hit_rates}), x="日期", y="命中率")
+
+
+def evaluation_panel_page():
+    """K8: Evaluation panel with metrics trends and historical comparison."""
+    st.header("✅ 评估面板")
+
+    st.info("评估面板 - 黄金测试集评估结果和趋势")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("Overall Score", "0.87", delta="+0.02")
+    with col2:
+        st.metric("Pass Rate", "94%", delta="+3%")
+    with col3:
+        st.metric("Total Test Cases", "45", delta="+5")
+
+    st.divider()
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("各类别通过率")
+        categories = ["medical_knowledge", "symptom_to_dept", "booking", "record_generation"]
+        pass_rates = [0.92, 0.95, 0.88, 0.85]
+        st.bar_chart(pd.DataFrame({"类别": categories, "通过率": pass_rates}), x="类别", y="通过率")
+
+    with col2:
+        st.subheader("评估趋势")
+        dates = ["03-19", "03-20", "03-21", "03-22", "03-23", "03-24", "03-25"]
+        scores = [0.82, 0.83, 0.85, 0.84, 0.86, 0.85, 0.87]
+        st.line_chart(pd.DataFrame({"日期": dates, "得分": scores}), x="日期", y="得分")
+
+    st.divider()
+
+    st.subheader("最新评估结果")
+    eval_results = [
+        {"Case ID": "kb_001", "Category": "medical_knowledge", "Score": 0.92, "Status": "PASS"},
+        {"Case ID": "kb_002", "Category": "medical_knowledge", "Score": 0.88, "Status": "PASS"},
+        {"Case ID": "symptom_001", "Category": "symptom_to_dept", "Score": 0.95, "Status": "PASS"},
+        {"Case ID": "symptom_002", "Category": "symptom_to_dept", "Score": 0.91, "Status": "PASS"},
+        {"Case ID": "booking_001", "Category": "booking", "Score": 0.78, "Status": "FAIL"},
+    ]
+    st.dataframe(pd.DataFrame(eval_results), use_container_width=True)
+
+    st.divider()
+
+    st.subheader("失败案例详情")
+    failed = [r for r in eval_results if r["Status"] == "FAIL"]
+    if failed:
+        for f in failed:
+            with st.expander(f"Case: {f['Case ID']} (Score: {f['Score']})"):
+                st.write(f"**Category**: {f['Category']}")
+                st.write(f"**Score**: {f['Score']}")
+                st.write(f"**Reason**: Low answer relevancy")
+                st.write(f"**Suggested Action**: Review question-answer alignment")
+    else:
+        st.success("所有测试用例均已通过！")
 
 
 def audit_logs_page():
