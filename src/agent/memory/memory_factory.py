@@ -12,7 +12,7 @@ class MemoryFactory:
     """Factory for creating memory instances.
 
     Supports configuration-driven backend selection:
-    - working: in_memory (default) or redis (future)
+    - working: in_memory (default) or redis
     - semantic: sqlite (default)
     - episodic: chroma (default)
     """
@@ -22,7 +22,9 @@ class MemoryFactory:
         """Create working memory store.
 
         Args:
-            settings: Optional settings dict with 'backend' key.
+            settings: Optional settings dict with keys:
+                - backend: "in_memory" or "redis"
+                - redis_host, redis_port, redis_db, redis_password, ttl (for redis)
 
         Returns:
             WorkingMemoryStore instance.
@@ -30,8 +32,15 @@ class MemoryFactory:
         backend = (settings or {}).get("backend", "in_memory")
 
         if backend == "redis":
-            # TODO: Implement RedisWorkingMemoryStore
-            raise NotImplementedError("Redis working memory not yet implemented")
+            from src.agent.memory.redis_working_memory import RedisWorkingMemoryStore
+            return RedisWorkingMemoryStore(
+                host=(settings or {}).get("redis_host", "localhost"),
+                port=(settings or {}).get("redis_port", 6379),
+                db=(settings or {}).get("redis_db", 0),
+                password=(settings or {}).get("redis_password"),
+                key_prefix=(settings or {}).get("key_prefix", "medpilot:wm:"),
+                ttl=(settings or {}).get("ttl", 3600),
+            )
         elif backend == "in_memory":
             return WorkingMemoryStore()
         else:

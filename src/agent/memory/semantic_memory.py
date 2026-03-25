@@ -170,3 +170,85 @@ class SemanticMemory:
             exists = cursor.fetchone() is not None
             conn.close()
             return exists
+
+    def list_patients(self, limit: int = 100, offset: int = 0) -> list:
+        """List all patient profiles.
+
+        Args:
+            limit: Maximum number of results.
+            offset: Number of results to skip.
+
+        Returns:
+            List of patient profile dicts with patient_id.
+        """
+        with self._lock:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.execute(
+                """
+                SELECT patient_id, profile_json, updated_at, created_at
+                FROM patient_profiles
+                ORDER BY updated_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (limit, offset)
+            )
+            rows = cursor.fetchall()
+            conn.close()
+
+        results = []
+        for row in rows:
+            profile = json.loads(row[1])
+            profile["_meta"] = {
+                "patient_id": row[0],
+                "updated_at": row[2],
+                "created_at": row[3],
+            }
+            # Add patient_id at top level for convenience
+            profile["patient_id"] = row[0]
+            results.append(profile)
+
+        return results
+
+    def search(self, query: str, fields: list = None) -> list:
+        """Search patient profiles by text query.
+
+        Searches across all text fields in the profile JSON.
+
+        Args:
+            query: Search query string.
+            fields: Optional list of specific fields to search.
+                   If None, searches all fields.
+
+        Returns:
+            List of matching patient profile dicts.
+        """
+        # For SQLite without FTS, we do simple LIKE matching
+        # Load all and filter (acceptable for small datasets)
+        with self._lock:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.execute(
+                "SELECT patient_id, profile_json FROM patient_profiles"
+            )
+            rows = cursor.fetchall()
+            conn.close()
+
+        query_lower = query.lower()
+        results = []
+
+        for row in rows:
+            patient_id = row[0]
+            profile = json.loads(row[1])
+
+            # Build searchable text
+            if fields:
+                search_text = " ".join(
+                    str(profile.get(f, "")) for f in fields
+                )
+            else:
+                search_text = json.dumps(profile, ensure_ascii=False)
+
+            if query_lower in search_text.lower():
+                profile["patient_id"] = patient_id
+                results.append(profile)
+
+        return results

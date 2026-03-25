@@ -125,11 +125,11 @@
 
 | 任务编号 | 任务名称 | 状态 | 备注 |
 |---------|---------|------|------|
-| G1 | WorkingMemory 持久化（可选 Redis） | [ ] | 支持内存/Redis 切换 |
-| G2 | SemanticMemory 完整 CRUD | [ ] | 支持按 patient_id 查询、合并更新 |
-| G3 | EpisodicMemory 向量检索 | [ ] | 复诊时按 patient_id 过滤 + 相似度召回 |
-| G4 | 会话结束时的记忆提炼 | [ ] | 调用 LLM 生成摘要，存入情景记忆 |
-| G5 | 新会话时记忆注入 | [ ] | 自动加载长期档案 + 检索相似历史 |
+| G1 | WorkingMemory 持久化（可选 Redis） | [x] | 支持内存/Redis 切换 |
+| G2 | SemanticMemory 完整 CRUD | [x] | 支持按 patient_id 查询、合并更新 |
+| G3 | EpisodicMemory 向量检索 | [x] | 复诊时按 patient_id 过滤 + 相似度召回 |
+| G4 | 会话结束时的记忆提炼 | [x] | 调用 LLM 生成摘要，存入情景记忆 |
+| G5 | 新会话时记忆注入 | [x] | 自动加载长期档案 + 检索相似历史 |
 
 ---
 

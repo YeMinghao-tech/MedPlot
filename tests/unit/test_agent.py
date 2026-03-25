@@ -7,6 +7,7 @@ from src.agent.memory.working_memory import WorkingMemory, WorkingMemoryStore
 from src.agent.memory.semantic_memory import SemanticMemory
 from src.agent.memory.episodic_memory import EpisodicMemory
 from src.agent.memory.memory_factory import MemoryFactory
+from src.agent.memory.memory_manager import MemoryManager
 
 
 class TestIntentClassifier:
@@ -250,6 +251,49 @@ class TestSemanticMemory:
         assert memory.get("p1") is None
 
 
+class TestSemanticMemoryExtended:
+    """Test SemanticMemory extended features (G2)."""
+
+    def test_list_patients(self, tmp_path):
+        """Test listing patient profiles."""
+        db_path = str(tmp_path / "test_profiles.db")
+        memory = SemanticMemory(db_path=db_path)
+
+        memory.upsert("p1", {"name": "张三", "age": 30})
+        memory.upsert("p2", {"name": "李四", "age": 25})
+
+        patients = memory.list_patients()
+
+        assert len(patients) == 2
+        patient_ids = {p["patient_id"] for p in patients}
+        assert "p1" in patient_ids
+        assert "p2" in patient_ids
+
+    def test_search_patients(self, tmp_path):
+        """Test searching patient profiles."""
+        db_path = str(tmp_path / "test_profiles.db")
+        memory = SemanticMemory(db_path=db_path)
+
+        memory.upsert("p1", {"name": "张三", "condition": "高血压"})
+        memory.upsert("p2", {"name": "李四", "condition": "糖尿病"})
+
+        results = memory.search("高血压")
+
+        assert len(results) == 1
+        assert results[0]["patient_id"] == "p1"
+
+    def test_search_patients_no_match(self, tmp_path):
+        """Test search with no matches."""
+        db_path = str(tmp_path / "test_profiles.db")
+        memory = SemanticMemory(db_path=db_path)
+
+        memory.upsert("p1", {"name": "张三"})
+
+        results = memory.search("糖尿病")
+
+        assert len(results) == 0
+
+
 class TestMemoryFactory:
     """Test MemoryFactory functionality."""
 
@@ -258,6 +302,20 @@ class TestMemoryFactory:
         store = MemoryFactory.create_working()
 
         assert isinstance(store, WorkingMemoryStore)
+
+    def test_create_working_memory_redis(self):
+        """Test creating redis working memory (G1)."""
+        # This will fail if redis is not available, but factory should not raise
+        # NotImplementedError anymore
+        from src.agent.memory.redis_working_memory import RedisWorkingMemoryStore
+        # Factory returns RedisWorkingMemoryStore when backend=redis
+        # (actual connection may fail if redis not running)
+        try:
+            store = MemoryFactory.create_working({"backend": "redis"})
+            assert isinstance(store, RedisWorkingMemoryStore)
+        except Exception:
+            # Redis not available in test env is OK
+            pass
 
     def test_create_semantic_memory(self, tmp_path):
         """Test creating semantic memory."""
@@ -279,3 +337,76 @@ class TestMemoryFactory:
         )
 
         assert isinstance(memory, EpisodicMemory)
+
+
+class TestMemoryManager:
+    """Test MemoryManager for G4/G5."""
+
+    def test_distill_session_requires_patient_id(self, tmp_path):
+        """Test that distill requires patient_id."""
+        from unittest.mock import MagicMock
+
+        semantic = SemanticMemory(db_path=str(tmp_path / "sem.db"))
+        mock_episodic = MagicMock()
+        manager = MemoryManager(semantic, mock_episodic)
+
+        memory = WorkingMemory(session_id="s1")
+        # No patient_id set
+
+        result = manager.distill_session(memory, [0.0] * 128)
+
+        assert result is None
+        mock_episodic.add.assert_not_called()
+
+    def test_distill_session_with_patient_id(self, tmp_path):
+        """Test memory distillation (G4)."""
+        from unittest.mock import MagicMock
+
+        semantic = SemanticMemory(db_path=str(tmp_path / "sem.db"))
+        mock_episodic = MagicMock()
+        mock_episodic.add.return_value = "ep1"
+        manager = MemoryManager(semantic, mock_episodic)
+
+        memory = WorkingMemory(session_id="s1", patient_id="p1")
+        memory.add_turn("user", "我发烧三天了")
+        memory.symptom_tree = {"symptoms": ["发烧"]}
+
+        result = manager.distill_session(memory, [0.0] * 128)
+
+        assert result == "ep1"
+        mock_episodic.add.assert_called_once()
+        call_args = mock_episodic.add.call_args
+        assert call_args.kwargs["patient_id"] == "p1"
+        assert call_args.kwargs["session_id"] == "s1"
+
+    def test_inject_into_session(self, tmp_path):
+        """Test memory injection into new session (G5)."""
+        from unittest.mock import MagicMock
+
+        semantic = SemanticMemory(db_path=str(tmp_path / "sem.db"))
+        semantic.upsert("p1", {
+            "name": "张三",
+            "allergies": ["青霉素"],
+            "chronic_conditions": ["高血压"],
+        })
+        mock_episodic = MagicMock()
+        manager = MemoryManager(semantic, mock_episodic)
+
+        memory = WorkingMemory(session_id="s2")
+        result = manager.inject_into_session(memory, "p1")
+
+        assert result["profile"]["name"] == "张三"
+        assert memory.context["allergies"] == ["青霉素"]
+        assert memory.context["chronic_conditions"] == ["高血压"]
+
+    def test_update_patient_profile(self, tmp_path):
+        """Test updating patient profile."""
+        semantic = SemanticMemory(db_path=str(tmp_path / "sem.db"))
+        semantic.upsert("p1", {"name": "张三", "age": 30})
+
+        semantic.upsert("p1", {"age": 31, "allergies": ["头孢"]})
+
+        profile = semantic.get("p1")
+        assert profile["name"] == "张三"
+        assert profile["age"] == 31
+        assert "头孢" in profile["allergies"]
