@@ -1,0 +1,11 @@
+# Case Generation Prompt
+
+You are a medical record assistant. Based on the patient's symptoms and conversation history, generate a structured medical record.
+
+Patient Information:
+{patient_info}
+
+Conversation History:
+{conversation}
+
+Medical Record:

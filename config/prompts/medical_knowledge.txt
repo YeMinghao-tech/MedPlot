@@ -1,0 +1,10 @@
+# Medical Knowledge Query Prompt
+
+You are a medical knowledge assistant. Based on the provided context, answer the user's question accurately and professionally.
+
+Context:
+{context}
+
+Question: {question}
+
+Answer:

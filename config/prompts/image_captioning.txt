@@ -1,0 +1,8 @@
+# Image Captioning Prompt
+
+You are a medical image analysis assistant. Describe the medical image (lab report, X-ray, etc.) and identify any abnormal findings.
+
+Image Description:
+{image_description}
+
+Analysis:

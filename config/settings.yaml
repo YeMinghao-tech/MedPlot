@@ -1,0 +1,73 @@
+# MedPilot Configuration
+# This is a minimal configuration placeholder
+
+# LLM Configuration
+llm:
+  provider: dashscope
+  model: qwen-max
+  api_key: ${DASHSCOPE_API_KEY:}
+
+# Vision LLM
+vision_llm:
+  provider: dashscope
+  model: qwen-vl-max
+
+# Embedding Configuration
+embedding:
+  provider: dashscope
+  model: text-embedding-v1
+
+# Vector Store Configuration
+vector_store:
+  backend: chroma
+  persist_path: ./data/db/chroma
+
+# Retrieval Configuration
+retrieval:
+  sparse_backend: bm25
+  fusion_algorithm: rrf
+  top_k_dense: 20
+  top_k_sparse: 20
+  top_k_final: 10
+  rerank_backend: cross_encoder
+  rerank_model: BAAI/bge-reranker-v2-m3
+  confidence_threshold: 0.7
+
+# Memory Configuration
+memory:
+  working:
+    backend: in_memory
+  semantic:
+    backend: sqlite
+    db_path: ./data/db/patient_profiles.db
+  episodic:
+    backend: chroma
+    collection: episodic_memory
+    metadata_db: ./data/db/episodic_metadata.db
+
+# HIS Configuration
+his:
+  backend: mock
+  mock_db_path: ./data/db/his_mock.db
+  use_wal: true
+  api_base: http://localhost:8080/his
+  timeout: 5
+
+# API Configuration
+api:
+  host: 0.0.0.0
+  port: 8000
+  cors_origins: ["*"]
+  websocket_enabled: true
+
+# Observability Configuration
+observability:
+  enabled: true
+  log_file: logs/traces.jsonl
+  audit_log_file: logs/audit_logs.jsonl
+  detail_level: standard
+
+# Dashboard Configuration
+dashboard:
+  enabled: true
+  port: 8501

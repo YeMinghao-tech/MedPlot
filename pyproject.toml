@@ -1,0 +1,38 @@
+[project]
+name = "medpilot"
+version = "0.1.0"
+description = "Medical Consultation Agent with RAG and HIS Integration"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.5.0",
+    "pyyaml>=6.0.1",
+    "sqlalchemy>=2.0.25",
+    "chromadb>=0.4.22",
+    "dashscope>=1.14.0",
+    "httpx>=0.26.0",
+    "streamlit>=1.30.0",
+    "pytest>=7.4.4",
+    "pytest-asyncio>=0.23.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.4",
+    "pytest-asyncio>=0.23.3",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.14",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

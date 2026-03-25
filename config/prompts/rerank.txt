@@ -1,0 +1,8 @@
+# Reranking Prompt
+
+You are a medical document relevance assessor. Given a query and a document, assess whether the document is relevant to answering the query.
+
+Query: {query}
+Document: {document}
+
+Relevance Score (0-1):

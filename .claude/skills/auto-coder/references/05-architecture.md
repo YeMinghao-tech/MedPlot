@@ -4,91 +4,133 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                     MCP Clients (外部调用层)                                  │
+│                                    客户端接入层                                              │
 │                                                                                             │
 │    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐                        │
-│    │  GitHub Copilot │    │  Claude Desktop │    │  其他 MCP Agent │                        │
+│    │   患者微信小程序  │    │    医生工作站    │    │   Web 管理后台   │                        │
 │    └────────┬────────┘    └────────┬────────┘    └────────┬────────┘                        │
 │             │                      │                      │                                 │
 │             └──────────────────────┼──────────────────────┘                                 │
-│                                    │  JSON-RPC 2.0 (Stdio Transport)                       │
+│                                    │  HTTPS / WebSocket                                     │
 └────────────────────────────────────┼────────────────────────────────────────────────────────┘
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                   MCP Server 层 (接口层)                                     │
+│                              API 网关层 (FastAPI)                                           │
 │                                                                                             │
 │    ┌─────────────────────────────────────────────────────────────────────────────────┐      │
-│    │                              MCP Protocol Handler                               │      │
-│    │                    (tools/list, tools/call, resources/*)                        │      │
+│    │                         RESTful API / WebSocket 服务                            │      │
+│    │   会话管理 | 用户认证 | 请求路由 | 流式响应 | 限流熔断                          │      │
 │    └─────────────────────────────────────────────────────────────────────────────────┘      │
-│                                           │                                                 │
-│    ┌──────────────────────┬───────────────┼───────────────┬──────────────────────┐          │
-│    ▼                      ▼               ▼               ▼                      ▼          │
-│ ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
-│ │query_knowledge│ │list_collections│ │get_document_ │  │search_by_    │  │  其他扩展    │    │
-│ │    _hub      │  │              │  │   summary    │  │  keyword     │  │   工具...    │    │
-│ └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘    │
+│                                                                                             │
+│    ┌─────────────────────────────────────────────────────────────────────────────────┐      │
+│    │                         Agent 入口适配器                                         │      │
+│    │   请求解析 → 会话加载 → 调用 Agent → 响应封装                                   │      │
+│    └─────────────────────────────────────────────────────────────────────────────────┘      │
 └────────────────────────────────────────┬────────────────────────────────────────────────────┘
-                                         │
                                          ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                   Core 层 (核心业务逻辑)                                     │
+│                              Agent 核心层 (认知架构)                                         │
 │                                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────────────────────┐    │
-│  │                            Query Engine (查询引擎)                                   │    │
+│  │                           Planner (规划与决策器)                                     │    │
 │  │  ┌─────────────────────────────────────────────────────────────────────────────┐    │    │
-│  │  │                         Query Processor (查询预处理)                         │    │    │
-│  │  │            关键词提取 | 查询扩展 (同义词/别名) | Metadata 解析               │    │    │
-│  │  └─────────────────────────────────────────────────────────────────────────────┘    │    │
-│  │                                       │                                             │    │
-│  │  ┌────────────────────────────────────┼────────────────────────────────────┐        │    │
-│  │  │                     Hybrid Search Engine (混合检索引擎)                  │        │    │
-│  │  │                                    │                                    │        │    │
-│  │  │    ┌───────────────────┐    ┌──────┴──────┐    ┌───────────────────┐    │        │    │
-│  │  │    │   Dense Route     │    │   Fusion    │    │   Sparse Route    │    │        │    │
-│  │  │    │ (Embedding 语义)  │◄───┤    (RRF)    ├───►│   (BM25 关键词)   │    │        │    │
-│  │  │    └───────────────────┘    └─────────────┘    └───────────────────┘    │        │    │
-│  │  └─────────────────────────────────────────────────────────────────────────┘        │    │
-│  │                                       │                                             │    │
-│  │  ┌─────────────────────────────────────────────────────────────────────────────┐    │    │
-│  │  │                        Reranker (重排序模块) [可选]                          │    │    │
-│  │  │          None (关闭) | Cross-Encoder (本地模型) | LLM Rerank               │    │    │
+│  │  │                      Intent Classifier (意图识别)                           │    │    │
+│  │  │         问诊 | 挂号 | 科普 | 确认 | 红线紧急拦截                            │    │    │
 │  │  └─────────────────────────────────────────────────────────────────────────────┘    │    │
 │  │                                       │                                             │    │
 │  │  ┌─────────────────────────────────────────────────────────────────────────────┐    │    │
-│  │  │                      Response Builder (响应构建器)                           │    │    │
-│  │  │            引用生成 (Citation) | 多模态内容组装 (Text + Image)               │    │    │
+│  │  │                      State Manager (状态机)                                 │    │    │
+│  │  │         症状收集 → 科室推荐 → 病历确认 → 挂号决策 → 结束                    │    │    │
+│  │  └─────────────────────────────────────────────────────────────────────────────┘    │    │
+│  │                                       │                                             │    │
+│  │  ┌─────────────────────────────────────────────────────────────────────────────┐    │    │
+│  │  │                      Router (工具路由)                                      │    │    │
+│  │  │         根据意图和状态，调度底层工具/服务                                    │    │    │
 │  │  └─────────────────────────────────────────────────────────────────────────────┘    │    │
 │  └─────────────────────────────────────────────────────────────────────────────────────┘    │
 │                                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────────────────────┐    │
-│  │                          Trace Collector (追踪收集器)                                │    │
-│  │                   trace_id 生成 | 各阶段耗时记录 | JSON Lines 输出                  │    │
+│  │                              Memory (记忆系统)                                       │    │
+│  │  ┌─────────────────────────────────────────────────────────────────────────────┐    │    │
+│  │  │                      Working Memory (短期工作记忆)                          │    │    │
+│  │  │         当前会话状态 | 已收集实体 | 待追问问题                              │    │    │
+│  │  └─────────────────────────────────────────────────────────────────────────────┘    │    │
+│  │  ┌─────────────────────────────────────────────────────────────────────────────┐    │    │
+│  │  │                      Semantic Memory (长期语义记忆)                         │    │    │
+│  │  │         患者健康档案 | 既往史 | 过敏史 | 基础信息                          │    │    │
+│  │  └─────────────────────────────────────────────────────────────────────────────┘    │    │
+│  │  ┌─────────────────────────────────────────────────────────────────────────────┐    │    │
+│  │  │                      Episodic Memory (历史情景记忆)                         │    │    │
+│  │  │         历史就诊摘要向量 | 相似病情检索 | 复诊上下文唤醒                   │    │    │
+│  │  └─────────────────────────────────────────────────────────────────────────────┘    │    │
 │  └─────────────────────────────────────────────────────────────────────────────────────┘    │
 └────────────────────────────────────────┬────────────────────────────────────────────────────┘
-                                         │
                                          ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                   Storage 层 (存储层)                                        │
+│                              工具层 (可插拔执行单元)                                         │
 │                                                                                             │
-│    ┌─────────────────────────────────────────────────────────────────────────────────┐      │
-│    │                             Vector Store (向量存储)                              │      │
-│    │                                                                                 │      │
-│    │     ┌─────────────────────────────────────────────────────────────────────┐     │      │
-│    │     │                         Chroma DB                                   │     │      │
-│    │     │    Dense Vector | Sparse Vector | Chunk Content | Metadata          │     │      │
-│    │     └─────────────────────────────────────────────────────────────────────┘     │      │
-│    └─────────────────────────────────────────────────────────────────────────────────┘      │
+│  ┌──────────────────────────────────┐    ┌──────────────────────────────────┐             │
+│  │        Medical RAG Engine        │    │        HIS Orchestrator         │             │
+│  │                                  │    │                                  │             │
+│  │  ┌────────────────────────────┐  │    │  ┌────────────────────────────┐  │             │
+│  │  │  Query Processor           │  │    │  │  Department Service       │  │             │
+│  │  │  (口语化→医学术语映射)     │  │    │  │  (科室查询)               │  │             │
+│  │  └────────────────────────────┘  │    │  └────────────────────────────┘  │             │
+│  │  ┌────────────────────────────┐  │    │  ┌────────────────────────────┐  │             │
+│  │  │  Hybrid Search             │  │    │  │  Schedule Service         │  │             │
+│  │  │  (Dense + Sparse + RRF)    │  │    │  │  (排班/号源查询)          │  │             │
+│  │  └────────────────────────────┘  │    │  └────────────────────────────┘  │             │
+│  │  ┌────────────────────────────┐  │    │  ┌────────────────────────────┐  │             │
+│  │  │  Reranker                  │  │    │  │  Booking Service          │  │             │
+│  │  │  (阈值熔断 + 重排)         │  │    │  │  (挂号事务 + 并发锁号)    │  │             │
+│  │  └────────────────────────────┘  │    │  └────────────────────────────┘  │             │
+│  └──────────────────────────────────┘    └──────────────────────────────────┘             │
 │                                                                                             │
-│    ┌──────────────────────────────────┐    ┌──────────────────────────────────┐             │
-│    │       BM25 Index (稀疏索引)       │    │       Image Store (图片存储)     │             │
-│    │        倒排索引 | IDF 统计        │    │    本地文件系统 | Base64 编码     │             │
-│    └──────────────────────────────────┘    └──────────────────────────────────┘             │
+│  ┌──────────────────────────────────┐    ┌──────────────────────────────────┐             │
+│  │       Case Generator             │    │       Vision Processor          │             │
+│  │                                  │    │                                  │             │
+│  │  ┌────────────────────────────┐  │    │  ┌────────────────────────────┐  │             │
+│  │  │  Entity Extractor          │  │    │  │  Image Preprocess         │  │             │
+│  │  │  (症状/时间/药物/过敏)     │  │    │  │  (压缩/格式转换)          │  │             │
+│  │  └────────────────────────────┘  │    │  └────────────────────────────┘  │             │
+│  │  ┌────────────────────────────┐  │    │  ┌────────────────────────────┐  │             │
+│  │  │  Record Builder            │  │    │  │  Vision LLM Call          │  │             │
+│  │  │  (结构化 JSON 生成)        │  │    │  │  (Qwen-VL / GPT-4V)       │  │             │
+│  │  └────────────────────────────┘  │    │  └────────────────────────────┘  │             │
+│  │  ┌────────────────────────────┐  │    │  ┌────────────────────────────┐  │             │
+│  │  │  Schema Validator          │  │    │  │  Abnormal Indicator       │  │             │
+│  │  │  (医疗规范校验)            │  │    │  │  Extractor                │  │             │
+│  │  └────────────────────────────┘  │    │  └────────────────────────────┘  │             │
+│  └──────────────────────────────────┘    └──────────────────────────────────┘             │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                  存储层 (持久化)                                             │
 │                                                                                             │
-│    ┌──────────────────────────────────┐    ┌──────────────────────────────────┐             │
-│    │     Trace Logs (追踪日志)         │    │   Processing Cache (处理缓存)    │             │
-│    │     JSON Lines 格式文件           │    │   文件哈希 | Chunk 哈希 | 状态   │             │
-│    └──────────────────────────────────┘    └──────────────────────────────────┘             │
+│  ┌──────────────────────────────────┐  ┌──────────────────────────────────┐                │
+│  │        Vector Store              │  │        Relational Store          │                │
+│  │  ┌────────────────────────────┐  │  │  ┌────────────────────────────┐  │                │
+│  │  │  Chroma DB                 │  │  │  │  SQLite / PostgreSQL       │  │                │
+│  │  │  - 医疗知识库 (Dense+      │  │  │  │  - 患者档案                │  │                │
+│  │  │    Sparse)                 │  │  │  │  - HIS 数据                │  │                │
+│  │  │  - 情景记忆向量            │  │  │  │  - 挂号记录                │  │                │
+│  │  └────────────────────────────┘  │  │  └────────────────────────────┘  │                │
+│  └──────────────────────────────────┘  └──────────────────────────────────┘                │
+│                                                                                             │
+│  ┌──────────────────────────────────┐  ┌──────────────────────────────────┐                │
+│  │        BM25 Index                │  │        File Storage              │                │
+│  │  ┌────────────────────────────┐  │  │  ┌────────────────────────────┐  │                │
+│  │  │  倒排索引 | IDF 统计       │  │  │  │  化验单图片 | 医疗图表     │  │                │
+│  │  └────────────────────────────┘  │  │  └────────────────────────────┘  │                │
+│  └──────────────────────────────────┘  └──────────────────────────────────┘                │
+│                                                                                             │
+│  ┌──────────────────────────────────┐  ┌──────────────────────────────────┐                │
+│  │        Trace & Audit             │  │        Processing Cache          │                │
+│  │  ┌────────────────────────────┐  │  │  ┌────────────────────────────┐  │                │
+│  │  │  JSON Lines (traces.jsonl) │  │  │  │  文件哈希 | 内容哈希      │  │                │
+│  │  │  JSON Lines (audit_logs)   │  │  │  │  增量更新状态             │  │                │
+│  │  └────────────────────────────┘  │  │  └────────────────────────────┘  │                │
+│  └──────────────────────────────────┘  └──────────────────────────────────┘                │
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -96,367 +138,393 @@
 │                                                                                             │
 │    ┌────────────┐    ┌────────────┐    ┌────────────┐    ┌────────────┐    ┌────────────┐   │
 │    │   Loader   │───►│  Splitter  │───►│ Transform  │───►│  Embedding │───►│   Upsert   │   │
-│    │ (文档解析) │    │  (切分器)  │    │ (增强处理) │    │  (向量化)  │    │  (存储)    │   │
+│    │ (医疗文档) │    │ (语义切分) │    │ (增强处理) │    │ (双路编码) │    │ (原子存储) │   │
 │    └────────────┘    └────────────┘    └────────────┘    └────────────┘    └────────────┘   │
 │         │                  │                  │                  │                │         │
 │         ▼                  ▼                  ▼                  ▼                ▼         │
 │    ┌────────────┐    ┌────────────┐    ┌────────────┐    ┌────────────┐    ┌────────────┐   │
-│    │MarkItDown │    │Recursive   │    │LLM重写     │    │Dense:      │    │Chroma      │   │
-│    │PDF→MD     │    │Character   │    │Image       │    │OpenAI/BGE  │    │Upsert      │   │
-│    │元数据提取 │    │TextSplitter│    │Captioning  │    │Sparse:BM25 │    │幂等写入    │   │
+│    │纯文本优先   │    │Recursive   │    │LLM重写     │    │Dense:      │    │Chroma      │   │
+│    │MD/TXT     │    │Character   │    │元数据注入  │    │通义/BGE    │    │BM25        │   │
+│    │FHIR解析   │    │TextSplitter│    │图片描述    │    │Sparse:BM25 │    │图片存储    │   │
 │    └────────────┘    └────────────┘    └────────────┘    └────────────┘    └────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                Libs 层 (可插拔抽象层)                                        │
-│                                                                                             │
-│    ┌────────────────────────────────────────────────────────────────────────────────┐       │
-│    │                            Factory Pattern (工厂模式)                           │       │
-│    └────────────────────────────────────────────────────────────────────────────────┘       │
-│                                           │                                                 │
-│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐  │
-│  │ LLM Client │ │ Embedding  │ │  Splitter  │ │VectorStore │ │  Reranker  │ │ Evaluator  │  │
-│  │  Factory   │ │  Factory   │ │  Factory   │ │  Factory   │ │  Factory   │ │  Factory   │  │
-│  ├────────────┤ ├────────────┤ ├────────────┤ ├────────────┤ ├────────────┤ ├────────────┤  │
-│  │ · Azure    │ │ · OpenAI   │ │ · Recursive│ │ · Chroma   │ │ · None     │ │ · Ragas    │  │
-│  │ · OpenAI   │ │ · BGE      │ │ · Semantic │ │ · Qdrant   │ │ · CrossEnc │ │ · DeepEval │  │
-│  │ · Ollama   │ │ · Ollama   │ │ · FixedLen │ │ · Pinecone │ │ · LLM      │ │ · Custom   │  │
-│  │ · DeepSeek │ │ · ...      │ │ · ...      │ │ · ...      │ │            │ │            │  │
-│  │ · Vision✨ │ │            │ │            │ │            │ │            │ │            │  │
-│  └────────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│                             Observability 层 (可观测性)                                      │
-│                                                                                             │
-│    ┌──────────────────────────────────────┐    ┌──────────────────────────────────────┐     │
-│    │          Trace Context               │    │         Web Dashboard                │     │
-│    │   trace_id | stages[] | metrics      │    │        (Streamlit)                   │     │
-│    │   record_stage() | finish()          │    │    请求列表 | 耗时瀑布图 | 详情展开   │     │
-│    └──────────────────────────────────────┘    └──────────────────────────────────────┘     │
-│                                                                                             │
-│    ┌──────────────────────────────────────┐    ┌──────────────────────────────────────┐     │
-│    │          Evaluation Module           │    │         Structured Logger            │     │
-│    │   Hit Rate | MRR | Faithfulness      │    │    JSON Formatter | File Handler     │     │
-│    └──────────────────────────────────────┘    └──────────────────────────────────────┘     │
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 5.2 目录结构
 
 ```
-smart-knowledge-hub/
+medical-agent-hub/
 │
 ├── config/                              # 配置文件目录
-│   ├── settings.yaml                    # 主配置文件 (LLM/Embedding/VectorStore 配置)
+│   ├── settings.yaml                    # 主配置文件 (LLM/Embedding/VectorStore/记忆/HIS)
 │   └── prompts/                         # Prompt 模板目录
-│       ├── image_captioning.txt         # 图片描述生成 Prompt
-│       ├── chunk_refinement.txt         # Chunk 重写 Prompt
+│       ├── medical_knowledge.txt        # 医疗问答 Prompt
+│       ├── case_generation.txt          # 病历生成 Prompt
+│       ├── symptom_elicitation.txt      # 症状追问 Prompt
+│       ├── image_captioning.txt         # 化验单/影像描述 Prompt
 │       └── rerank.txt                   # LLM Rerank Prompt
 │
 ├── src/                                 # 源代码主目录
 │   │
-│   ├── mcp_server/                      # MCP Server 层 (接口层)
+│   ├── api/                             # API 网关层 (FastAPI)
 │   │   ├── __init__.py
-│   │   ├── server.py                    # MCP Server 入口 (Stdio Transport)
-│   │   ├── protocol_handler.py          # JSON-RPC 协议处理
-│   │   └── tools/                       # MCP Tools 定义
-│   │       ├── __init__.py
-│   │       ├── query_knowledge_hub.py   # 主检索工具
-│   │       ├── list_collections.py      # 列出集合工具
-│   │       └── get_document_summary.py  # 文档摘要工具
+│   │   ├── app.py                       # FastAPI 应用入口
+│   │   ├── dependencies.py              # 依赖注入 (会话、认证)
+│   │   ├── routers/                     # 路由模块
+│   │   │   ├── __init__.py
+│   │   │   ├── chat.py                  # 对话接口 (POST /chat, WebSocket)
+│   │   │   ├── session.py               # 会话管理 (创建/获取/删除)
+│   │   │   └── patient.py               # 患者档案接口
+│   │   ├── models/                      # Pydantic 请求/响应模型
+│   │   │   ├── __init__.py
+│   │   │   ├── chat.py
+│   │   │   └── patient.py
+│   │   └── middleware/                  # 中间件
+│   │       ├── auth.py                  # 认证中间件
+│   │       └── logging.py               # 请求日志中间件
 │   │
-│   ├── core/                            # Core 层 (核心业务逻辑)
+│   ├── agent/                           # Agent 核心层 (认知架构)
 │   │   ├── __init__.py
-│   │   ├── settings.py                   # 配置加载与校验 (Settings：load_settings/validate_settings)
-│   │   ├── types.py                      # 核心数据类型/契约（Document/Chunk/ChunkRecord），供 ingestion/retrieval/mcp 复用
-│   │   │
-│   │   ├── query_engine/                # 查询引擎模块
+│   │   ├── planner/                     # 规划与决策器
 │   │   │   ├── __init__.py
-│   │   │   ├── query_processor.py       # 查询预处理 (关键词提取/查询扩展)
-│   │   │   ├── hybrid_search.py         # 混合检索引擎 (Dense + Sparse + RRF)
-│   │   │   ├── dense_retriever.py       # 稠密向量检索
-│   │   │   ├── sparse_retriever.py      # 稀疏检索 (BM25)
-│   │   │   ├── fusion.py                # 结果融合 (RRF 算法)
-│   │   │   └── reranker.py              # 重排序模块 (None/CrossEncoder/LLM)
+│   │   │   ├── intent_classifier.py     # 意图识别
+│   │   │   ├── state_manager.py         # 对话状态机
+│   │   │   └── router.py                # 工具路由决策
 │   │   │
-│   │   ├── response/                    # 响应构建模块
-│   │   │   ├── __init__.py
-│   │   │   ├── response_builder.py      # 响应构建器
-│   │   │   ├── citation_generator.py    # 引用生成器
-│   │   │   └── multimodal_assembler.py  # 多模态内容组装 (Text + Image)
-│   │   │
-│   │   └── trace/                       # 追踪模块
+│   │   └── memory/                      # 记忆系统
 │   │       ├── __init__.py
-│   │       ├── trace_context.py         # 追踪上下文 (trace_id/stages)
-│   │       └── trace_collector.py       # 追踪收集器
+│   │       ├── working_memory.py        # 短期工作记忆
+│   │       ├── semantic_memory.py       # 长期语义记忆 (患者档案)
+│   │       ├── episodic_memory.py       # 历史情景记忆
+│   │       └── memory_factory.py        # 记忆工厂 (可插拔后端)
+│   │
+│   ├── tools/                           # 工具层 (可插拔执行单元)
+│   │   ├── __init__.py
+│   │   │
+│   │   ├── rag_engine/                  # 医疗 RAG 引擎
+│   │   │   ├── __init__.py
+│   │   │   ├── query_processor.py       # 查询预处理 (口语化转医学术语)
+│   │   │   ├── hybrid_search.py         # 混合检索 (Dense + Sparse + RRF)
+│   │   │   ├── dense_retriever.py       # 稠密检索
+│   │   │   ├── sparse_retriever.py      # 稀疏检索 (BM25)
+│   │   │   ├── fusion.py                # RRF 融合
+│   │   │   ├── reranker.py              # 精排重排 (带阈值熔断)
+│   │   │   └── vector_store_adapter.py  # 向量库适配器
+│   │   │
+│   │   ├── his_orchestrator/            # HIS 工具编排器
+│   │   │   ├── __init__.py
+│   │   │   ├── dept_service.py          # 科室服务
+│   │   │   ├── schedule_service.py      # 排班服务
+│   │   │   ├── booking_service.py       # 挂号服务 (事务管理)
+│   │   │   └── his_client.py            # HIS 客户端抽象
+│   │   │
+│   │   ├── case_generator/              # 病历生成器
+│   │   │   ├── __init__.py
+│   │   │   ├── entity_extractor.py      # 实体抽取
+│   │   │   ├── record_builder.py        # 结构化病历构建
+│   │   │   └── schema_validator.py      # JSON Schema 校验
+│   │   │
+│   │   └── vision_processor/            # 多模态处理
+│   │       ├── __init__.py
+│   │       ├── image_preprocessor.py    # 图片预处理 (压缩/格式转换)
+│   │       ├── vision_llm_client.py     # Vision LLM 调用
+│   │       └── indicator_extractor.py   # 异常指标提取
 │   │
 │   ├── ingestion/                       # Ingestion Pipeline (离线数据摄取)
 │   │   ├── __init__.py
-│   │   ├── pipeline.py                  # Pipeline 主流程编排 (支持 on_progress 回调)
-│   │   ├── document_manager.py          # 文档生命周期管理 (list/delete/stats)
+│   │   ├── pipeline.py                  # Pipeline 主流程编排
+│   │   ├── document_manager.py          # 文档生命周期管理
 │   │   │
-│   │   ├── chunking/                    # Chunking 模块 (文档切分)
+│   │   ├── chunking/                    # 切分模块
 │   │   │   ├── __init__.py
-│   │   │   └── document_chunker.py      # Document → Chunks 转换（调用 libs.splitter）
+│   │   │   └── medical_chunker.py       # 医疗文档切分
 │   │   │
-│   │   ├── transform/                   # Transform 模块 (增强处理)
+│   │   ├── transform/                   # 增强处理模块
 │   │   │   ├── __init__.py
-│   │   │   ├── base_transform.py        # Transform 抽象基类
-│   │   │   ├── chunk_refiner.py         # Chunk 智能重组/去噪
-│   │   │   ├── metadata_enricher.py     # 语义元数据注入 (Title/Summary/Tags)
-│   │   │   └── image_captioner.py       # 图片描述生成 (Vision LLM)
+│   │   │   ├── base_transform.py
+│   │   │   ├── chunk_refiner.py         # 智能重组
+│   │   │   ├── metadata_enricher.py     # 元数据注入 (疾病标签、权威等级)
+│   │   │   └── image_captioner.py       # 医疗图像描述
 │   │   │
-│   │   ├── embedding/                   # Embedding 模块 (向量化)
+│   │   ├── embedding/                   # 向量化模块
 │   │   │   ├── __init__.py
-│   │   │   ├── dense_encoder.py         # 稠密向量编码
-│   │   │   ├── sparse_encoder.py        # 稀疏向量编码 (BM25)
-│   │   │   └── batch_processor.py       # 批处理优化
+│   │   │   ├── dense_encoder.py
+│   │   │   ├── sparse_encoder.py
+│   │   │   └── batch_processor.py
 │   │   │
-│   │   └── storage/                     # Storage 模块 (存储)
+│   │   └── storage/                     # 存储模块
 │   │       ├── __init__.py
-│   │       ├── vector_upserter.py       # 向量库 Upsert
-│   │       ├── bm25_indexer.py          # BM25 索引构建
-│   │       └── image_storage.py         # 图片文件存储
+│   │       ├── vector_upserter.py
+│   │       ├── bm25_indexer.py
+│   │       └── image_storage.py
 │   │
-│   ├── libs/                            # Libs 层 (可插拔抽象层)
+│   ├── libs/                            # 可插拔抽象层 (基础设施)
 │   │   ├── __init__.py
-│   │   │
-│   │   ├── loader/                      # Loader 抽象 (文档加载)
-│   │   │   ├── __init__.py
-│   │   │   ├── base_loader.py           # Loader 抽象基类
-│   │   │   ├── pdf_loader.py            # PDF Loader (MarkItDown)
-│   │   │   └── file_integrity.py        # 文件完整性检查 (SHA256 哈希)
 │   │   │
 │   │   ├── llm/                         # LLM 抽象
 │   │   │   ├── __init__.py
-│   │   │   ├── base_llm.py              # LLM 抽象基类
-│   │   │   ├── llm_factory.py           # LLM 工厂
-│   │   │   ├── azure_llm.py             # Azure OpenAI 实现
-│   │   │   ├── openai_llm.py            # OpenAI 实现
-│   │   │   ├── ollama_llm.py            # Ollama 本地模型实现
-│   │   │   ├── deepseek_llm.py          # DeepSeek 实现
-│   │   │   ├── base_vision_llm.py       # Vision LLM 抽象基类（支持图像输入）
-│   │   │   └── azure_vision_llm.py      # Azure Vision 实现 (GPT-4o/GPT-4-Vision)
+│   │   │   ├── base_llm.py
+│   │   │   ├── llm_factory.py
+│   │   │   ├── qwen_llm.py              # 通义千问实现 (推荐)
+│   │   │   ├── openai_llm.py
+│   │   │   ├── ollama_llm.py
+│   │   │   ├── base_vision_llm.py
+│   │   │   └── qwen_vl_llm.py           # Qwen-VL 实现
 │   │   │
 │   │   ├── embedding/                   # Embedding 抽象
 │   │   │   ├── __init__.py
-│   │   │   ├── base_embedding.py        # Embedding 抽象基类
-│   │   │   ├── embedding_factory.py     # Embedding 工厂
-│   │   │   ├── openai_embedding.py      # OpenAI Embedding 实现
-│   │   │   ├── azure_embedding.py       # Azure Embedding 实现
-│   │   │   └── ollama_embedding.py      # Ollama 本地模型实现
-│   │   │
-│   │   ├── splitter/                    # Splitter 抽象 (切分策略)
-│   │   │   ├── __init__.py
-│   │   │   ├── base_splitter.py         # Splitter 抽象基类
-│   │   │   ├── splitter_factory.py      # Splitter 工厂
-│   │   │   ├── recursive_splitter.py    # RecursiveCharacterTextSplitter 实现
-│   │   │   ├── semantic_splitter.py     # 语义切分实现
-│   │   │   └── fixed_length_splitter.py # 定长切分实现
+│   │   │   ├── base_embedding.py
+│   │   │   ├── embedding_factory.py
+│   │   │   ├── dashscope_embedding.py   # 通义文本向量
+│   │   │   ├── openai_embedding.py
+│   │   │   └── ollama_embedding.py
 │   │   │
 │   │   ├── vector_store/                # VectorStore 抽象
 │   │   │   ├── __init__.py
-│   │   │   ├── base_vector_store.py     # VectorStore 抽象基类
-│   │   │   ├── vector_store_factory.py  # VectorStore 工厂
-│   │   │   └── chroma_store.py          # Chroma 实现
+│   │   │   ├── base_vector_store.py
+│   │   │   ├── vector_store_factory.py
+│   │   │   └── chroma_store.py
 │   │   │
 │   │   ├── reranker/                    # Reranker 抽象
 │   │   │   ├── __init__.py
-│   │   │   ├── base_reranker.py         # Reranker 抽象基类
-│   │   │   ├── reranker_factory.py      # Reranker 工厂
-│   │   │   ├── cross_encoder_reranker.py# CrossEncoder 实现
-│   │   │   └── llm_reranker.py          # LLM Rerank 实现
+│   │   │   ├── base_reranker.py
+│   │   │   ├── reranker_factory.py
+│   │   │   ├── bge_reranker.py          # BGE 重排实现 (支持中文)
+│   │   │   └── llm_reranker.py
 │   │   │
-│   │   └── evaluator/                   # Evaluator 抽象
+│   │   ├── splitter/                    # Splitter 抽象
+│   │   │   ├── __init__.py
+│   │   │   ├── base_splitter.py
+│   │   │   ├── splitter_factory.py
+│   │   │   └── recursive_splitter.py
+│   │   │
+│   │   └── his/                         # HIS 集成抽象
 │   │       ├── __init__.py
-│   │       ├── base_evaluator.py        # Evaluator 抽象基类
-│   │       ├── evaluator_factory.py     # Evaluator 工厂
-│   │       ├── ragas_evaluator.py       # Ragas 实现
-│   │       └── custom_evaluator.py      # 自定义指标实现
+│   │       ├── base_his.py
+│   │       ├── his_factory.py
+│   │       ├── mock_his.py              # Mock 实现 (SQLite)
+│   │       └── http_his.py              # 真实 HIS HTTP 适配器
 │   │
-│   └── observability/                   # Observability 层 (可观测性)
+│   └── observability/                   # Observability 层
 │       ├── __init__.py
-│       ├── logger.py                    # 结构化日志 (JSON Formatter)
-│       ├── dashboard/                   # Web Dashboard (可视化管理平台)
+│       ├── logger.py                    # 结构化日志
+│       ├── trace/                       # 追踪模块
 │       │   ├── __init__.py
-│       │   ├── app.py                   # Streamlit 入口 (页面导航注册)
-│       │   ├── pages/                   # 六大功能页面
-│       │   │   ├── overview.py          # 系统总览 (组件配置 + 数据统计)
-│       │   │   ├── data_browser.py      # 数据浏览器 (文档/Chunk/图片查看)
-│       │   │   ├── ingestion_manager.py # Ingestion 管理 (触发摄取/删除文档)
-│       │   │   ├── ingestion_traces.py  # Ingestion 追踪 (摄取历史与详情)
-│       │   │   ├── query_traces.py      # Query 追踪 (查询历史与详情)
-│       │   │   └── evaluation_panel.py  # 评估面板 (运行评估/查看指标)
-│       │   └── services/                # Dashboard 数据服务层
-│       │       ├── trace_service.py     # Trace 读取服务 (解析 traces.jsonl)
-│       │       ├── data_service.py      # 数据浏览服务 (ChromaStore/ImageStorage)
-│       │       └── config_service.py    # 配置读取服务 (Settings 展示)
+│       │   ├── trace_context.py
+│       │   └── trace_collector.py
+│       ├── dashboard/                   # Web Dashboard (Streamlit)
+│       │   ├── __init__.py
+│       │   ├── app.py
+│       │   ├── pages/
+│       │   │   ├── overview.py          # 系统总览
+│       │   │   ├── data_browser.py      # 知识库浏览器
+│       │   │   ├── ingestion_manager.py # 摄取管理
+│       │   │   ├── query_traces.py      # 问诊追踪
+│       │   │   ├── memory_viewer.py     # 记忆查看器
+│       │   │   ├── medical_kb_quality.py# 知识库质量面板
+│       │   │   └── audit_logs.py        # 审计日志
+│       │   └── services/
+│       │       ├── trace_service.py
+│       │       ├── data_service.py
+│       │       └── config_service.py
 │       └── evaluation/                  # 评估模块
 │           ├── __init__.py
-│           ├── eval_runner.py           # 评估执行器
-│           ├── ragas_evaluator.py       # Ragas 评估实现
-│           └── composite_evaluator.py   # 组合评估器 (多后端并行)
-
+│           ├── eval_runner.py
+│           ├── ragas_evaluator.py
+│           └── composite_evaluator.py
 │
 ├── data/                                # 数据目录
-│   ├── documents/                       # 原始文档存放
-│   │   └── {collection}/                # 按集合分类
-│   ├── images/                          # 提取的图片存放
-│   │   └── {collection}/                # 按集合分类（实际存储在 {doc_hash}/ 子目录下）
-│   └── db/                              # 数据库与索引文件目录
-│       ├── ingestion_history.db         # 文件完整性历史记录 (SQLite)
-│       │                                # 表结构：file_hash, file_path, status, processed_at, error_msg
-│       │                                # 用途：增量摄取，避免重复处理未变更文件
-│       ├── image_index.db               # 图片索引映射 (SQLite)
-│       │                                # 表结构：image_id, file_path, collection, doc_hash, page_num
-│       │                                # 用途：快速查询 image_id → 本地文件路径，支持图片检索与引用
-│       ├── chroma/                      # Chroma 向量库目录
-│       │                                # 存储 Dense Vector、Sparse Vector 与 Chunk Metadata
-│       └── bm25/                        # BM25 索引目录
-│                                        # 存储倒排索引与 IDF 统计信息（当前使用 pickle）
+│   ├── medical_knowledge/               # 医疗知识库原始文档
+│   │   └── {collection}/
+│   ├── images/                          # 化验单/影像图片
+│   │   └── {collection}/
+│   └── db/                              # 数据库目录
+│       ├── ingestion_history.db         # 摄取历史
+│       ├── image_index.db               # 图片索引
+│       ├── patient_profiles.db          # 患者档案 (长期语义记忆)
+│       ├── episodic_metadata.db         # 情景记忆元数据
+│       ├── his_mock.db                  # Mock HIS 数据库
+│       ├── chroma/                      # Chroma 向量库
+│       └── bm25/                        # BM25 索引
 │
 ├── cache/                               # 缓存目录
-│   ├── embeddings/                      # Embedding 缓存 (按内容哈希)
-│   ├── captions/                        # 图片描述缓存
-│   └── processing/                      # 处理状态缓存 (文件哈希/Chunk 哈希)
+│   ├── embeddings/
+│   ├── captions/
+│   └── processing/
 │
 ├── logs/                                # 日志目录
-│   ├── traces.jsonl                     # 追踪日志 (JSON Lines)
-│   └── app.log                          # 应用日志
+│   ├── traces.jsonl                     # 追踪日志
+│   ├── audit_logs.jsonl                 # 审计日志
+│   └── app.log
 │
 ├── tests/                               # 测试目录
-│   ├── unit/                            # 单元测试
-│   │   ├── test_dense_retriever.py      # D2: 稠密检索器测试
-│   │   ├── test_sparse_retriever.py     # D3: 稀疏检索器测试
-│   │   ├── test_fusion_rrf.py           # D4: RRF 融合测试
-│   │   ├── test_reranker_fallback.py    # D6: Reranker 回退测试
-│   │   ├── test_protocol_handler.py     # E2: 协议处理器测试
-│   │   ├── test_response_builder.py     # E3: 响应构建器测试
-│   │   ├── test_list_collections.py     # E4: 集合列表工具测试
-│   │   ├── test_get_document_summary.py # E5: 文档摘要工具测试
-│   │   ├── test_trace_context.py        # F1: 追踪上下文测试
-│   │   ├── test_jsonl_logger.py         # F2: JSON Lines 日志测试
-│   │   └── ...                          # 其他已有单元测试
-│   ├── integration/                     # 集成测试
-│   │   ├── test_ingestion_pipeline.py
-│   │   ├── test_hybrid_search.py        # D5: 混合检索集成测试
-│   │   └── test_mcp_server.py           # E1-E6: MCP 服务器集成测试
-│   ├── e2e/                             # 端到端测试
-│   │   ├── test_data_ingestion.py
-│   │   ├── test_recall.py               # G2: 召回回归测试
-│   │   └── test_mcp_client.py           # G1: MCP Client 模拟测试
-│   └── fixtures/                        # 测试数据
-│       ├── sample_documents/
-│       └── golden_test_set.json         # F5/G2: 黄金测试集
+│   ├── unit/
+│   ├── integration/
+│   ├── e2e/
+│   └── fixtures/
+│       ├── medical_documents/           # 医疗测试文档
+│       ├── golden_test_set.json         # 黄金测试集
+│       └── red_team_test_set.json       # 红线对抗测试集
 │
 ├── scripts/                             # 脚本目录
-│   ├── ingest.py                        # 数据摄取脚本（离线摄取入口）
-│   ├── query.py                         # 查询测试脚本（在线查询入口）
+│   ├── ingest_medical.py                # 医疗知识摄取脚本
+│   ├── seed_his.py                      # 初始化 HIS Mock 数据
+│   ├── query.py                         # 测试查询脚本
 │   ├── evaluate.py                      # 评估运行脚本
 │   └── start_dashboard.py               # Dashboard 启动脚本
 │
-├── main.py                              # MCP Server 启动入口
-├── pyproject.toml                       # Python 项目配置
-├── requirements.txt                     # 依赖列表
-└── README.md                            # 项目说明
+├── main.py                              # FastAPI 应用启动入口
+├── pyproject.toml
+├── requirements.txt
+└── README.md
 ```
 
 ### 5.3 模块说明
 
-#### 5.3.1 MCP Server 层
+#### 5.3.1 API 网关层
 
 | 模块 | 职责 | 关键技术点 |
 |-----|-----|----------|
-| `server.py` | MCP Server 主入口，处理 Stdio Transport 通信 | Python MCP SDK，JSON-RPC 2.0 |
-| `protocol_handler.py` | 协议解析与能力协商 | `initialize`、`tools/list`、`tools/call` |
-| `tools/*` | 对外暴露的工具函数实现 | 装饰器定义，参数校验，响应格式化 |
+| `app.py` | FastAPI 应用入口，注册路由、中间件 | FastAPI，生命周期管理 |
+| `routers/chat.py` | 对话接口，支持 HTTP 和 WebSocket | 流式响应 (SSE)，会话管理 |
+| `routers/session.py` | 会话创建、获取、删除 | 会话 ID 生成，超时管理 |
+| `models/` | Pydantic 请求/响应模型 | 数据校验，自动文档生成 |
+| `middleware/auth.py` | 认证与鉴权 | JWT，患者身份验证 |
 
-#### 5.3.2 Core 层
+#### 5.3.2 Agent 核心层
 
 | 模块 | 职责 | 关键技术点 |
 |-----|-----|----------|
-| `settings.py` | 配置加载与校验 | 读取 `config/settings.yaml`，解析为 `Settings`，必填字段校验（fail-fast） |
-| `types.py` | 核心数据类型/契约（全链路复用） | 定义 `Document/Chunk/ChunkRecord/ProcessedQuery/RetrievalResult`；序列化稳定；作为 ingestion/retrieval/mcp 的数据契约中心 |
-| `query_processor.py` | 查询预处理 | 关键词提取、同义词扩展、Metadata 解析 |
-| `hybrid_search.py` | 混合检索编排 | 并行 Dense/Sparse 召回，结果融合，Metadata 过滤 |
-| `dense_retriever.py` | 语义向量检索 | Query Embedding + VectorStore 检索，Cosine Similarity |
-| `sparse_retriever.py` | BM25 关键词检索 | 倒排索引查询，TF-IDF 打分 |
-| `fusion.py` | 结果融合 | RRF 算法，排名倒数加权 |
-| `reranker.py` | 精排重排 | CrossEncoder / LLM Rerank / Fallback 回退 |
-| `response_builder.py` | 响应构建 | MCP 响应格式化，Markdown 生成 |
-| `citation_generator.py` | 引用生成 | 从检索结果生成结构化引用列表 |
-| `multimodal_assembler.py` | 多模态组装 | Text + Image Base64 编码，MCP 多内容类型 |
-| `trace_context.py` | 追踪上下文 | trace_id 生成，阶段记录，finish 汇总 |
-| `trace_collector.py` | 追踪收集器 | 收集 trace 并触发持久化到 JSON Lines |
+| **Planner (规划器)** | | |
+| `intent_classifier.py` | 意图识别（问诊/挂号/科普/确认/红线拦截） | 规则 + LLM 分类，紧急关键词优先 |
+| `state_manager.py` | 对话状态机 | 状态转移图，超时重置 |
+| `router.py` | 工具路由决策 | 根据状态和意图调度底层工具 |
+| **Memory (记忆系统)** | | |
+| `working_memory.py` | 短期工作记忆 | 维护当前会话 `PatientState`，支持序列化 |
+| `semantic_memory.py` | 长期语义记忆 | SQLite 读写患者档案，Upsert 合并更新 |
+| `episodic_memory.py` | 历史情景记忆 | 向量检索相似历史，按 patient_id 过滤 |
 
-#### 5.3.3 Scripts 层（命令行入口）
+#### 5.3.3 工具层
 
-| 脚本 | 职责 | 关键技术点 |
+| 模块 | 职责 | 关键技术点 |
 |-----|-----|----------|
-| `ingest.py` | 离线数据摄取入口 | CLI 参数解析，调用 Ingestion Pipeline，支持 `--collection`/`--path`/`--force` |
-| `query.py` | 在线查询测试入口 | CLI 参数解析，调用 HybridSearch + Reranker，支持 `--query`/`--top-k`/`--verbose` |
-| `evaluate.py` | 评估运行入口 | 加载 golden_test_set，运行评估，输出 metrics |
-| `start_dashboard.py` | Dashboard 启动入口 | Streamlit 应用启动 |
+| **RAG Engine** | | |
+| `query_processor.py` | 查询预处理 | 口语化→医学术语映射，同义词扩展 |
+| `hybrid_search.py` | 混合检索编排 | 并行 Dense/Sparse，RRF 融合 |
+| `reranker.py` | 精排重排 | CrossEncoder (bge-reranker-v2-m3)，阈值熔断 |
+| **HIS Orchestrator** | | |
+| `dept_service.py` | 科室查询 | 按关键词匹配科室 |
+| `schedule_service.py` | 排班查询 | 日期/医生过滤，余号统计 |
+| `booking_service.py` | 挂号服务 | 事务管理，并发锁号，回滚 |
+| **Case Generator** | | |
+| `entity_extractor.py` | 实体抽取 | 症状、持续时间、药物、过敏史 |
+| `record_builder.py` | 病历构建 | 汇总记忆和抽取结果，调用 LLM 生成 JSON |
+| `schema_validator.py` | Schema 校验 | 确保输出符合医疗规范 |
+| **Vision Processor** | | |
+| `image_preprocessor.py` | 图片预处理 | 压缩、格式转换 |
+| `vision_llm_client.py` | Vision LLM 调用 | Qwen-VL / GPT-4V 适配 |
+| `indicator_extractor.py` | 异常指标提取 | 仅提取超出正常范围指标 |
 
 #### 5.3.4 Ingestion Pipeline 层
 
 | 模块 | 职责 | 关键技术点 |
 |-----|-----|----------|
-| `pipeline.py` | Pipeline 流程编排 | 串行执行（或分阶段可观测），异常处理，增量更新；支持 `on_progress` 回调；统一使用 `core/types.py` 的数据契约 |
-| `document_manager.py` | 文档生命周期管理 | list/delete/stats 操作；跨 4 个存储（Chroma/BM25/ImageStorage/FileIntegrity）的协调删除；供 Dashboard 与 CLI 调用 |
-
-| `chunking/document_chunker.py` | Document→Chunks 转换 | 调用 `libs.splitter` 进行文本切分；生成稳定 Chunk ID（格式：`{doc_id}_{index:04d}_{hash}`）；继承 metadata；建立 source_ref 溯源链接 |
-| `transform/base_transform.py` | Transform 抽象 | 原子化、幂等；可独立重试；失败降级不阻塞 |
-| `transform/chunk_refiner.py` | Chunk 智能重组 | 规则去噪 + 可选 LLM 二次加工；可回退 |
-| `transform/metadata_enricher.py` | 元数据增强 | Title/Summary/Tags 规则生成 + 可选 LLM 增强 |
-| `transform/image_captioner.py` | 图片描述生成 | Vision LLM；写回 metadata/text；禁用/失败降级 |
-| `embedding/dense_encoder.py` | 稠密向量编码 | 通过 `libs.embedding` 调用具体 provider；批处理 |
-| `embedding/sparse_encoder.py` | 稀疏向量编码 | BM25 编码/统计（或替换实现）；批处理 |
-| `storage/vector_upserter.py` | 向量存储写入 | 通过 `libs.vector_store` Upsert；幂等；metadata 完整 |
+| `pipeline.py` | Pipeline 流程编排 | 支持 `on_progress` 回调，增量更新 |
+| `document_manager.py` | 文档生命周期管理 | list/delete/stats，跨存储协调 |
+| `medical_chunker.py` | 医疗文档切分 | 医疗分隔符（疾病概述/临床表现/治疗原则） |
+| `transform/` | 增强处理 | LLM 重组、元数据注入、图像描述生成 |
+| `embedding/` | 双路编码 | Dense + Sparse，批处理优化 |
+| `storage/` | 存储 | 向量库 Upsert，BM25 索引，图片存储 |
 
 #### 5.3.5 Libs 层 (可插拔抽象)
 
 | 抽象接口 | 当前默认实现 | 可替换选项 |
 |---------|------------|----------|
-| `LLMClient` | Azure OpenAI | OpenAI / Ollama / DeepSeek |
-| `VisionLLMClient` | Azure OpenAI Vision (GPT-4o) | OpenAI Vision / Ollama Vision (LLaVA) |
-| `EmbeddingClient` | OpenAI text-embedding-3 | BGE / Ollama 本地模型 |
-| `Loader` | PDF Loader（MarkItDown） | Markdown/HTML/Code Loader 等 |
-| `FileIntegrity` | SQLite (`data/db/ingestion_history.db`) | Redis（分布式）/ PostgreSQL（企业级）/ JSON文件（测试） |
+| `LLMClient` | Qwen-Max (DashScope) | Azure OpenAI / OpenAI / Ollama / DeepSeek |
+| `VisionLLMClient` | Qwen-VL-Max | GPT-4o / Claude 3.5 Sonnet |
+| `EmbeddingClient` | 通义文本向量 | OpenAI Embedding / BGE / Ollama |
 | `Splitter` | RecursiveCharacterTextSplitter | Semantic / FixedLen |
-| `VectorStore` | Chroma | Qdrant / Pinecone / Milvus |
-| `Reranker` | CrossEncoder | LLM Rerank / None (关闭) |
-| `Evaluator` | Ragas | DeepEval / 自定义指标 |
+| `VectorStore` | Chroma | Qdrant / Milvus |
+| `Reranker` | BAAI/bge-reranker-v2-m3 | LLM Rerank / None |
+| `Memory` (短期) | 内存字典 | Redis |
+| `Memory` (长期档案) | SQLite | PostgreSQL |
+| `Memory` (情景) | Chroma + SQLite | 其他向量库 + 关系库 |
+| `HISClient` | MockHISClient (SQLite) | 真实 HIS HTTP API |
 
 #### 5.3.6 Observability 层
 
 | 模块 | 职责 | 关键技术点 |
 |-----|-----|----------|
 | `logger.py` | 结构化日志 | JSON Formatter，JSON Lines 输出 |
-| `trace_context.py` | 请求级追踪 | trace_id，trace_type（query/ingestion），阶段耗时记录，`finish()` + `to_dict()` 序列化 |
-| `trace_collector.py` | 追踪收集器 | 收集 trace 并触发持久化到 JSON Lines |
-| `dashboard/app.py` | Dashboard 入口 | Streamlit 多页面应用，`st.navigation` 页面注册 |
-| `dashboard/pages/overview.py` | 系统总览 | 组件配置卡片，数据资产统计 |
-| `dashboard/pages/data_browser.py` | 数据浏览器 | 文档列表，Chunk 详情，图片预览 |
-| `dashboard/pages/ingestion_manager.py` | Ingestion 管理 | 文件上传，摄取触发（进度条），文档删除 |
-| `dashboard/pages/ingestion_traces.py` | Ingestion 追踪 | 摄取历史，阶段耗时瀑布图 |
-| `dashboard/pages/query_traces.py` | Query 追踪 | 查询历史，Dense/Sparse 对比，Rerank 变化 |
-| `dashboard/pages/evaluation_panel.py` | 评估面板 | 运行评估，指标展示，历史趋势（Phase H 实现） |
-| `dashboard/services/trace_service.py` | Trace 数据服务 | 解析 traces.jsonl，按 trace_type 分类 |
-| `dashboard/services/data_service.py` | 数据浏览服务 | 封装 ChromaStore/ImageStorage 读取 |
-| `dashboard/services/config_service.py` | 配置读取服务 | 封装 Settings 展示 |
-| `evaluation/eval_runner.py` | 评估执行 | 黄金测试集，指标计算，报告生成 |
-| `evaluation/ragas_evaluator.py` | Ragas 评估 | Faithfulness, Answer Relevancy, Context Precision |
-| `evaluation/composite_evaluator.py` | 组合评估器 | 多后端并行执行，结果汇总 |
-
+| `trace/` | 请求级追踪 | trace_id，trace_type，阶段耗时记录 |
+| `dashboard/` | Web Dashboard | Streamlit 多页面，医疗专用面板 |
+| `evaluation/` | 评估模块 | Ragas 指标，红线对抗测试，复合评估器 |
 
 ### 5.4 数据流说明
 
-#### 5.4.1 离线数据摄取流 (Ingestion Flow)
+#### 5.4.1 在线问诊与挂号流程
 
 ```
-原始文档 (PDF)
+患者输入 (微信小程序)
+      │
+      ▼
+┌─────────────────┐
+│   API Gateway   │  POST /chat
+│   (FastAPI)     │  会话验证，加载 session_id
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Agent 核心层                              │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ Memory Scheduler                                     │    │
+│  │  - 从 WorkingMemory 加载当前状态                    │    │
+│  │  - 从 SemanticMemory 加载患者档案                   │    │
+│  │  - 从 EpisodicMemory 检索相似历史 (复诊场景)        │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                           │                                 │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ Intent Classifier                                    │    │
+│  │  - 紧急关键词检测 (红线拦截)                        │    │
+│  │  - 意图分类 (问诊/挂号/科普/确认)                   │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                           │                                 │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ State Manager                                        │    │
+│  │  - 更新状态机                                        │    │
+│  │  - 判断信息完整性                                    │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                           │                                 │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ Router                                               │    │
+│  │  - 科普意图 → RAG Engine                            │    │
+│  │  - 挂号意图且信息充足 → Case Generator              │    │
+│  │  - 科室咨询 → HIS Orchestrator                      │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+         │
+         ├─ 科普意图 ──► 触发 RAG Tool ──► 获取医学知识片段
+         │                                    │
+         │                                    ▼
+         │                            回传给 Planner (LLM) ──► 结合上下文拟人化生成回答 ──► 返回给患者
+         │
+         ├─ 挂号意图且信息充足 ──► Case Generator ──► 生成病历草案 ──► 返回给患者确认
+         │                              │
+         │                              ▼ (患者确认后)
+         │                    HIS Orchestrator (工具箱)
+         │                         │
+         │                         ├─ query_departments
+         │                         ├─ query_doctor_schedule
+         │                         └─ book_appointment (事务级锁号)
+         │
+         └─ 科室咨询 ──► 触发 HIS Tool ──► 回传给 Planner (LLM) ──► 整合为自然语言建议 ──► 返回给患者
+```
+
+#### 5.4.2 离线医疗知识摄取流
+
+```
+医疗指南 (.txt/.md)
       │
       ▼
 ┌─────────────────┐     未变更则跳过
@@ -466,187 +534,129 @@ smart-knowledge-hub/
          │ 新文件/已变更
          ▼
 ┌─────────────────┐
-│     Loader      │  PDF → Markdown + 图片提取 + 元数据收集
-│   (MarkItDown)  │
+│     Loader      │  文本读取 + 元数据收集
+│  (纯文本优先)   │  (来源、章节标题)
 └────────┬────────┘
-         │ Document (text + metadata.images)
+         │ Document (text + metadata)
          ▼
 ┌─────────────────┐
-│    Splitter     │  按语义边界切分，保留图片引用
-│ (Recursive)     │
+│    Splitter     │  按医疗语义边界切分
+│ (Recursive)     │  (分隔符: 疾病概述、临床表现、治疗原则)
 └────────┬────────┘
-         │ Chunks[] (with image_refs)
+         │ Chunks[]
          ▼
 ┌─────────────────┐
-│   Transform     │  LLM 重写 + 元数据注入 + 图片描述生成
+│   Transform     │  LLM 重组 + 元数据注入 (疾病标签、权威等级)
 │ (Enrichment)    │
 └────────┬────────┘
-         │ Enriched Chunks[] (with captions in text)
+         │ Enriched Chunks[]
          ▼
 ┌─────────────────┐
-│   Embedding     │  Dense (OpenAI) + Sparse (BM25) 双路编码
+│   Embedding     │  Dense (通义) + Sparse (BM25) 双路编码
 │  (Dual Path)    │
 └────────┬────────┘
          │ Vectors + Chunks + Metadata
          ▼
 ┌─────────────────┐
-│    Upsert       │  Chroma Upsert (幂等) + BM25 Index + 图片存储
+│    Upsert       │  Chroma Upsert + BM25 索引
 │   (Storage)     │
 └─────────────────┘
 ```
 
-#### 5.4.2 在线查询流 (Query Flow)
-
-```
-用户查询 (via MCP Client)
-      │
-      ▼
-┌─────────────────┐
-│  MCP Server     │  JSON-RPC 解析，工具路由
-│ (Stdio Transport)│
-└────────┬────────┘
-         │ query + params
-         ▼
-┌─────────────────┐
-│ Query Processor │  关键词提取 + 同义词扩展 + Metadata 解析
-│                 │
-└────────┬────────┘
-         │ processed_query + filters
-         ▼
-┌─────────────────────────────────────────────┐
-│              Hybrid Search                  │
-│  ┌─────────────┐          ┌─────────────┐   │
-│  │Dense Retrieval│  并行   │Sparse Retrieval│   │
-│  │ (Embedding)  │◄───────►│  (BM25)     │   │
-│  └──────┬──────┘          └──────┬──────┘   │
-│         │                        │          │
-│         └────────┬───────────────┘          │
-│                  ▼                          │
-│         ┌─────────────┐                     │
-│         │   Fusion    │  RRF 融合           │
-│         │   (RRF)     │                     │
-│         └──────┬──────┘                     │
-└────────────────┼────────────────────────────┘
-                 │ Top-M 候选
-                 ▼
-┌─────────────────┐
-│    Reranker     │  CrossEncoder / LLM / None
-│   (Optional)    │
-└────────┬────────┘
-         │ Top-K 精排结果
-         ▼
-┌─────────────────┐
-│ Response Builder│  引用生成 + 图片 Base64 编码 + MCP 格式化
-│                 │
-└────────┬────────┘
-         │ MCP Response (TextContent + ImageContent)
-         ▼
-返回给 MCP Client (Copilot / Claude Desktop)
-```
-
-#### 5.4.3 管理操作流 (Management Flow)
-
-```
-Dashboard (Streamlit UI)
-      │
-      ├─── 数据浏览 ──────────────────────────────────────────┐
-      │                                                       │
-      │    DataService                                        │
-      │    ├── ChromaStore.get_by_metadata(source=...)        │
-      │    ├── ImageStorage.list_images(collection, doc_hash) │
-      │    └── 返回文档列表 / Chunk 详情 / 图片预览            │
-      │                                                       │
-      ├─── Ingestion 管理 ────────────────────────────────────┤
-      │                                                       │
-      │    触发摄取：                                          │
-      │    ├── IngestionPipeline.run(path, collection,        │
-      │    │                         on_progress=callback)    │
-      │    └── st.progress() 实时更新进度                      │
-      │                                                       │
-      │    删除文档：                                          │
-      │    ├── DocumentManager.delete_document(source, col)   │
-      │    │   ├── ChromaStore.delete_by_metadata(source=...) │
-      │    │   ├── BM25Indexer.remove_document(source=...)    │
-      │    │   ├── ImageStorage.delete_images(col, doc_hash)  │
-      │    │   └── FileIntegrity.remove_record(file_hash)     │
-      │    └── 刷新文档列表                                    │
-      │                                                       │
-      └─── Trace 查看 ───────────────────────────────────────┘
-           │
-           TraceService
-           ├── 读取 logs/traces.jsonl
-           ├── 按 trace_type 分类 (query / ingestion)
-           └── 返回 Trace 列表与详情
-```
-
 ### 5.5 配置驱动设计
 
-
-系统通过 `config/settings.yaml` 统一配置各组件实现，支持零代码切换：
+系统通过 `config/settings.yaml` 统一配置各组件实现，支持零代码切换。
 
 ```yaml
-# config/settings.yaml 示例
+# config/settings.yaml (医疗导诊 Agent)
 
-# LLM 配置
+# LLM 配置 (主推 Qwen)
 llm:
-  provider: azure           # azure | openai | ollama | deepseek
-  model: gpt-4o
-  azure_endpoint: "..."
-  api_key: "${AZURE_API_KEY}"
+  provider: dashscope           # dashscope | azure | openai | ollama | openai_compatible
+  model: qwen-max
+  api_key: ${DASHSCOPE_API_KEY}
+  # 若使用本地部署
+  # base_url: http://192.168.1.100:8000/v1
+
+# Vision LLM (化验单识别)
+vision_llm:
+  provider: dashscope
+  model: qwen-vl-max
 
 # Embedding 配置
 embedding:
-  provider: openai          # openai | azure | ollama (本地)
-  model: text-embedding-3-small
-  
-# Vision LLM 配置 (图片描述)
-vision_llm:
-  provider: azure           # azure | dashscope (Qwen-VL)
-  model: gpt-4o
-  
+  provider: dashscope           # dashscope | openai | ollama
+  model: text-embedding-v1
+
 # 向量存储配置
 vector_store:
-  backend: chroma           # chroma | qdrant | pinecone
+  backend: chroma
   persist_path: ./data/db/chroma
 
 # 检索配置
 retrieval:
-  sparse_backend: bm25      # bm25 | elasticsearch
-  fusion_algorithm: rrf     # rrf | weighted_sum
+  sparse_backend: bm25
+  fusion_algorithm: rrf
   top_k_dense: 20
   top_k_sparse: 20
   top_k_final: 10
+  rerank_backend: cross_encoder
+  rerank_model: BAAI/bge-reranker-v2-m3
+  # 安全阈值，低于此分数触发 fallback
+  confidence_threshold: 0.7
 
-# 重排配置
-rerank:
-  backend: cross_encoder    # none | cross_encoder | llm
-  model: cross-encoder/ms-marco-MiniLM-L-6-v2
-  top_m: 30
+# 记忆配置
+memory:
+  working:
+    backend: in_memory          # in_memory | redis
+  semantic:
+    backend: sqlite
+    db_path: ./data/db/patient_profiles.db
+  episodic:
+    backend: chroma
+    collection: episodic_memory
+    metadata_db: ./data/db/episodic_metadata.db
 
-# 评估配置
-evaluation:
-  backends: [ragas, custom]
-  golden_test_set: ./tests/fixtures/golden_test_set.json
+# HIS 配置 (底层业务系统)
+his:
+  backend: mock                 # mock | api
+  mock_db_path: ./data/db/his_mock.db
+  use_wal: true                 # [CRITICAL] 必须开启以支持挂号事务的高并发锁处理
+  api_base: http://localhost:8080/his
+  timeout: 5
 
-# 可观测性配置
+# API 服务配置
+api:
+  host: 0.0.0.0
+  port: 8000
+  cors_origins: ["*"]           # 生产环境需限制
+  websocket_enabled: true
+
+# 可观测性
 observability:
   enabled: true
-  log_file: ./logs/traces.jsonl
+  log_file: logs/traces.jsonl
+  audit_log_file: logs/audit_logs.jsonl
+  detail_level: standard
 
-# Dashboard 管理平台配置
+# Dashboard
 dashboard:
   enabled: true
-  port: 8501                     # Streamlit 服务端口
-  traces_dir: ./logs             # Trace 日志文件目录
-  auto_refresh: true             # 是否自动刷新（轮询新 trace）
-  refresh_interval: 5            # 自动刷新间隔（秒）
+  port: 8501
 ```
 
 ### 5.6 扩展性设计要点
 
+1. **新增 LLM Provider**：实现 `BaseLLM` 接口，在 `libs/llm/llm_factory.py` 注册，配置文件指定 `provider` 即可。
 
-1. **新增 LLM Provider**：实现 `BaseLLM` 接口，在 `llm_factory.py` 注册，配置文件指定 `provider` 即可
-2. **新增文档格式**：实现 `BaseLoader` 接口，在 Pipeline 中注册对应文件扩展名的处理器
-3. **新增检索策略**：实现检索接口，在 `hybrid_search.py` 中组合调用
-4. **新增评估指标**：实现 `BaseEvaluator` 接口，在配置中添加到 `backends` 列表
+2. **替换记忆后端**：实现 `BaseMemory` 接口（在 `agent/memory/` 下定义），工厂根据配置选择（如从 SQLite 切换到 PostgreSQL）。
 
+3. **接入真实 HIS**：实现 `BaseHISClient` 接口，通过 HTTP 调用医院内部系统，无需修改上层业务逻辑。
+
+4. **新增医疗知识源**：实现 `BaseLoader` 接口，支持其他格式（如 FHIR XML），在 Ingestion Pipeline 中注册。
+
+5. **自定义评估指标**：实现 `BaseEvaluator` 接口，添加到 `evaluation.backends` 列表。
+
+6. **扩展红线测试**：在 `tests/fixtures/red_team_test_set.json` 中添加新的危急重症场景，自动化回归验证。
+
+7. **新增工具**：在 `tools/` 下新建模块，实现统一接口，并在 `agent/planner/router.py` 中注册路由规则。

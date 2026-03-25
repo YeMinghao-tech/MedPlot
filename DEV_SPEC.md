@@ -1292,9 +1292,9 @@ dashboard:
 
 | 任务编号 | 任务名称 | 状态 | 备注 |
 |---------|---------|------|------|
-| A1 | 初始化目录树与最小可运行入口 | [ ] | 按 5.2 节目录树创建所有 `__init__.py`、`main.py`、`pyproject.toml` |
-| A2 | 引入 pytest 并建立测试目录约定 | [ ] | `tests/unit/`、`tests/integration/`、`tests/e2e/`、`tests/fixtures/` |
-| A3 | 配置加载与校验（Settings） | [ ] | 读取 `config/settings.yaml`，解析为 `Settings`，必填字段校验 |
+| A1 | 初始化目录树与最小可运行入口 | [x] | 按 5.2 节目录树创建所有 `__init__.py`、`main.py`、`pyproject.toml` |
+| A2 | 引入 pytest 并建立测试目录约定 | [x] | `tests/unit/`、`tests/integration/`、`tests/e2e/`、`tests/fixtures/` |
+| A3 | 配置加载与校验（Settings） | [x] | 读取 `config/settings.yaml`，解析为 `Settings`，必填字段校验 |
 
 ---
 
