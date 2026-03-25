@@ -53,12 +53,17 @@ class VectorUpserter:
             chunk_id = self._generate_stable_id(chunk, dense_embeddings[i])
             chunk_ids.append(chunk_id)
 
+            # Filter out empty lists from metadata (Chroma requires non-empty lists)
+            filtered_metadata = {
+                k: v for k, v in chunk.metadata.items()
+                if v != [] and v != {} and v is not None
+            }
             record = {
                 "id": chunk_id,
                 "text": chunk.text,
                 "embedding": dense_embeddings[i],
                 "metadata": {
-                    **chunk.metadata,
+                    **filtered_metadata,
                     "source_ref": chunk.source_ref,
                     "chunk_index": chunk.chunk_index,
                 },

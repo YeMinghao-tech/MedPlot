@@ -64,20 +64,20 @@
 
 | 任务编号 | 任务名称 | 状态 | 备注 |
 |---------|---------|------|------|
-| C1 | 定义核心数据类型（Document/Chunk/ChunkRecord） | [ ] | `src/core/types.py`，包含医疗元数据字段 |
-| C2 | 文件完整性检查（SHA256） | [ ] | `SQLiteIntegrityChecker`，增量摄取 |
-| C3 | Loader 抽象基类与纯文本 Loader | [ ] | 优先 `.txt`/`.md`，支持 FHIR 解析预留 |
-| C4 | MedicalChunker（医疗语义切分） | [ ] | 调用 `libs.splitter`，配置医疗分隔符 |
-| C5 | Transform 基类 + ChunkRefiner | [ ] | 规则去噪 + LLM 智能重组 |
-| C6 | MetadataEnricher（疾病标签/权威等级） | [ ] | 为 Chunk 注入医疗元数据 |
-| C7 | ImageCaptioner（医疗图像描述） | [ ] | 调用 Vision LLM 生成化验单/影像描述（依赖 B2） |
-| C8 | DenseEncoder + SparseEncoder | [ ] | 双路编码，支持差量计算 |
-| C9 | BatchProcessor（批处理优化） | [ ] | 批量调用 Embedding API |
-| C10 | BM25Indexer（倒排索引构建） | [ ] | 计算 IDF，持久化 |
-| C11 | VectorUpserter（幂等 upsert） | [ ] | 稳定 chunk_id 生成 |
-| C12 | ImageStorage（图片存储 + SQLite 索引） | [ ] | 支持 WAL 模式 |
-| C13 | Pipeline 编排 | [ ] | 串行执行，支持 `on_progress` 回调 |
-| C14 | 脚本入口 ingest_medical.py | [ ] | CLI 支持 `--path`、`--collection`、`--force` |
+| C1 | 定义核心数据类型（Document/Chunk/ChunkRecord） | [x] | `src/core/types.py`，包含医疗元数据字段 |
+| C2 | 文件完整性检查（SHA256） | [x] | `SQLiteIntegrityChecker`，增量摄取 |
+| C3 | Loader 抽象基类与纯文本 Loader | [x] | 优先 `.txt`/`.md`，支持 FHIR 解析预留 |
+| C4 | MedicalChunker（医疗语义切分） | [x] | 调用 `libs.splitter`，配置医疗分隔符 |
+| C5 | Transform 基类 + ChunkRefiner | [x] | 规则去噪 + LLM 智能重组 |
+| C6 | MetadataEnricher（疾病标签/权威等级） | [x] | 为 Chunk 注入医疗元数据 |
+| C7 | ImageCaptioner（医疗图像描述） | [x] | 调用 Vision LLM 生成化验单/影像描述（依赖 B2） |
+| C8 | DenseEncoder + SparseEncoder | [x] | 双路编码，支持差量计算 |
+| C9 | BatchProcessor（批处理优化） | [x] | 批量调用 Embedding API |
+| C10 | BM25Indexer（倒排索引构建） | [x] | 计算 IDF，持久化 |
+| C11 | VectorUpserter（幂等 upsert） | [x] | 稳定 chunk_id 生成 |
+| C12 | ImageStorage（图片存储 + SQLite 索引） | [x] | 支持 WAL 模式 |
+| C13 | Pipeline 编排 | [x] | 串行执行，支持 `on_progress` 回调 |
+| C14 | 脚本入口 ingest_medical.py | [x] | CLI 支持 `--path`、`--collection`、`--force` |
 
 ---
 
