@@ -108,6 +108,7 @@ Round 3 still failing → STOP, show failure report to user
 
 1. **Update `DEV_SPEC.md`** (global file): change task marker `[ ]` → `[x]`
 2. **Re-sync**: `python .claude/skills/auto-coder/scripts/sync_spec.py --force`
+   - This now auto-updates the **总体进度** table based on task markers
 3. **Show summary & ask**:
 
 ```
