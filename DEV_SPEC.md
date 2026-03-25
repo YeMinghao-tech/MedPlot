@@ -1390,13 +1390,13 @@ dashboard:
 
 | 任务编号 | 任务名称 | 状态 | 备注 |
 |---------|---------|------|------|
-| H1 | 紧急症状关键词库 | [ ] | 胸痛放射、大出血、意识模糊等 |
-| H2 | 红线拦截器（EmergencyInterceptor） | [ ] | 在 IntentClassifier 前置执行 |
-| H3 | 越界建议阻断（PrescriptionRefusal） | [ ] | 拒绝开药/确诊请求，输出免责声明 |
-| H4 | Reranker 阈值熔断 | [ ] | 最高分低于 0.7 时触发 Fallback |
-| H5 | 幻觉防御（Faithfulness 校验） | [ ] | 生成病历后与原文对比 |
-| H6 | 红线对抗测试集构建 | [ ] | `tests/fixtures/red_team_test_set.json` |
-| H7 | 红线测试自动化 | [ ] | `pytest -m red_team` 回归验证 |
+| H1 | 紧急症状关键词库 | [x] | 胸痛放射、大出血、意识模糊等 |
+| H2 | 红线拦截器（EmergencyInterceptor） | [x] | 在 IntentClassifier 前置执行 |
+| H3 | 越界建议阻断（PrescriptionRefusal） | [x] | 拒绝开药/确诊请求，输出免责声明 |
+| H4 | Reranker 阈值熔断 | [x] | 最高分低于 0.7 时触发 Fallback |
+| H5 | 幻觉防御（Faithfulness 校验） | [x] | 生成病历后与原文对比 |
+| H6 | 红线对抗测试集构建 | [x] | `tests/fixtures/red_team_test_set.json` |
+| H7 | 红线测试自动化 | [x] | `pytest -m red_team` 回归验证 |
 
 ---
 
@@ -1471,7 +1471,7 @@ dashboard:
 | 阶段 E | 7 | 7 | 100% |
 | 阶段 F | 6 | 6 | 100% |
 | 阶段 G | 5 | 5 | 100% |
-| 阶段 H | 7 | 0 | 0% |
+| 阶段 H | 7 | 7 | 100% |
 | 阶段 I | 5 | 0 | 0% |
 | 阶段 J | 9 | 0 | 0% |
 | 阶段 K | 8 | 0 | 0% |

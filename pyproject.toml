@@ -32,6 +32,9 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "red_team: red team test cases for medical safety",
+]
 
 [tool.ruff]
 line-length = 100
