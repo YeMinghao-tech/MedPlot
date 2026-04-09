@@ -75,15 +75,20 @@ async def get_session(session_id: str) -> dict:
 
 
 @router.get("")
-async def list_sessions(patient_id: Optional[str] = None, limit: int = 100) -> List[dict]:
-    """List sessions, optionally filtered by patient.
+async def list_sessions(
+    patient_id: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0
+) -> dict:
+    """List sessions with pagination, optionally filtered by patient.
 
     Args:
         patient_id: Optional patient filter.
         limit: Maximum number of sessions to return.
+        offset: Number of sessions to skip for pagination.
 
     Returns:
-        List of session metadata.
+        Dict with sessions list and pagination info.
     """
     sessions = list(_session_metadata.values())
 
@@ -93,7 +98,15 @@ async def list_sessions(patient_id: Optional[str] = None, limit: int = 100) -> L
     # Sort by last_activity descending
     sessions.sort(key=lambda x: x["last_activity"], reverse=True)
 
-    return sessions[:limit]
+    total = len(sessions)
+    paginated = sessions[offset:offset + limit]
+
+    return {
+        "sessions": paginated,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.delete("/{session_id}")

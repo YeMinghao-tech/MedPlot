@@ -63,16 +63,16 @@
 | M-6 | 部分异常仍静默 | `router.py` 中 RAG 失败的异常已被日志记录，但不影响响应 |
 | M-10 | 其他文件仍有 print | 需要检查 `src/tools/` 等其他目录 |
 
-### Medium (0/9)
+### Medium (5/9 完成)
 
-| # | 问题 | 建议方案 |
-|---|------|----------|
-| N-1 | 会话列表无分页 | 实现 offset-based 分页 |
-| N-5 | 日志系统未集成 | API 层统一使用 logging 模块 |
-| N-6 | Health Check 不检查依赖 | 添加 DB/LLM/VectorStore 就绪检查 |
-| N-7 | 无 CI/CD | 添加 GitHub Actions 流水线 |
-| N-8 | WorkingMemory 无持久化 | 添加 Redis 或文件持久化 |
-| N-9 | SemanticMemory 全量加载 | 实现 SQL WHERE 子句过滤 |
+| # | 问题 | 修复方案 | 状态 |
+|---|------|----------|------|
+| N-1 | 会话列表无分页 | session.py 添加 offset 参数和 pagination 返回 | ✅ 已完成 |
+| N-5 | 日志系统未集成 | app.py 调用 setup_logging() 启用 JSON Lines 日志 | ✅ 已完成 |
+| N-6 | Health Check 不检查依赖 | 添加 router/llm/settings 健康检查 | ✅ 已完成 |
+| N-7 | 无 CI/CD | 添加 GitHub Actions workflow (test, lint, docker build) | ✅ 已完成 |
+| N-8 | WorkingMemory 无持久化 | 添加 Redis 或文件持久化 | ⏳ 未完成 |
+| N-9 | SemanticMemory 全量加载 | 实现 SQL WHERE 子句过滤 | ⏳ 未完成 |
 
 ### Minor (1/6)
 

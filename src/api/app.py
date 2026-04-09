@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.settings import load_settings, Settings
+from src.core.logging import setup_logging
 from src.api.routers import chat, session, patient
 from src.api.middleware.auth import AuthMiddleware
 from src.agent.planner.router import Router
@@ -31,6 +32,13 @@ def create_app() -> FastAPI:
         Configured FastAPI application instance.
     """
     global _app_settings
+
+    # Setup structured logging
+    setup_logging(
+        log_level="INFO",
+        log_file="logs/app.jsonl",
+        audit_log_file="logs/audit_logs.jsonl",
+    )
 
     # Load settings
     config_path = Path("config/settings.yaml")
@@ -91,11 +99,21 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health(request: Request):
-        """Health check endpoint with dependency check."""
+        """Health check endpoint with dependency verification."""
         router: Optional[Router] = getattr(request.app.state, 'router', None)
+
+        checks = {
+            "router": router is not None,
+            "llm": router.llm is not None if router else False,
+            "settings": _app_settings is not None,
+        }
+
+        all_healthy = all(checks.values())
+        status = "healthy" if all_healthy else "degraded"
+
         return {
-            "status": "healthy",
-            "router_initialized": router is not None
+            "status": status,
+            "checks": checks,
         }
 
     return app
