@@ -71,7 +71,7 @@
 | N-5 | 日志系统未集成 | app.py 调用 setup_logging() 启用 JSON Lines 日志 | ✅ 已完成 |
 | N-6 | Health Check 不检查依赖 | 添加 router/llm/settings 健康检查 | ✅ 已完成 |
 | N-7 | 无 CI/CD | 添加 GitHub Actions workflow (test, lint, docker build) | ✅ 已完成 |
-| N-8 | WorkingMemory 无持久化 | 添加 Redis 或文件持久化 | ⏳ 未完成 |
+| N-8 | WorkingMemory 无持久化 | 添加 SQLite 持久化，支持 save/load/cleanup | ✅ 已完成 |
 | N-9 | SemanticMemory 全量加载 | 实现 SQL WHERE 子句过滤 | ⏳ 未完成 |
 
 ### Minor (3/6)
@@ -82,7 +82,7 @@
 | L-2 | 无 RequestID 链路追踪 | 实现请求级别 trace_id | ⏳ 未完成 |
 | L-3 | logs/ 未加入 .gitignore | ✅ 已完成 |
 | L-4 | 类型注解不完整 | 核心 API 函数已有注解，`__init__` 不需注解 | ✅ 已完成 |
-| L-5 | 无 requirements.lock | 使用 `pip-compile` 生成锁文件 | ⏳ 未完成 |
+| L-5 | 无 requirements.lock | ✅ 已完成（使用 pip freeze 生成） | ✅ 已完成 |
 | L-6 | 模块导出不一致 | ✅ 已完成（Trace 模块） |
 
 ---
