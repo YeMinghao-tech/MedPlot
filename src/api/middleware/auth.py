@@ -1,8 +1,10 @@
 """Authentication middleware for API requests."""
 
+import json
 from fastapi import Request, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 from typing import Optional
 
 
@@ -37,10 +39,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if request.url.path.endswith("/ws"):
             return await call_next(request)
 
-        # In production, validate token here:
-        # auth_header = request.headers.get("Authorization")
-        # if not auth_header or not self._validate_token(auth_header):
-        #     raise HTTPException(status_code=401, detail="Unauthorized")
+        # Validate API key if configured
+        auth_header = request.headers.get("Authorization")
+        if not self._validate_token(auth_header):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Unauthorized"}
+            )
 
         response = await call_next(request)
         return response
@@ -54,11 +59,25 @@ class AuthMiddleware(BaseHTTPMiddleware):
         Returns:
             True if valid, False otherwise.
         """
-        # Placeholder - implement JWT/API key validation
+        import os
+
+        expected_key = os.environ.get("MEDPILOT_API_KEY")
+        if not expected_key:
+            # No auth configured - pass through (for development)
+            return True
+
+        if not auth_header:
+            return False
+
+        # Support both "Bearer <token>" and "Token <token>" formats
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
-            return len(token) > 0
-        return False
+        elif auth_header.startswith("Token "):
+            token = auth_header[6:]
+        else:
+            token = auth_header
+
+        return token == expected_key
 
 
 def verify_api_key(api_key: Optional[str], expected_key: Optional[str] = None) -> bool:

@@ -105,7 +105,9 @@ class MemoryManager:
         try:
             response = self.llm.generate(prompt)
             return response.strip()
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"LLM summary generation failed: {e}")
             return self._generate_rule_summary(memory)
 
     def _generate_rule_summary(self, memory: WorkingMemory) -> str:
@@ -164,8 +166,9 @@ class MemoryManager:
                     # episodes = self.episodic.search(patient_id, query_vector, top_k=top_k_similar)
                     # result["history"] = episodes
                     pass
-            except Exception:
-                pass  # Silently fail if episodic retrieval fails
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Episodic retrieval failed: {e}")
 
         return result
 

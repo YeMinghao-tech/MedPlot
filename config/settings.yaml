@@ -5,7 +5,7 @@
 llm:
   provider: dashscope
   model: qwen-max
-  api_key: ${DASHSCOPE_API_KEY:}
+  api_key: ${DASHSCOPE_API_KEY}
 
 # Vision LLM
 vision_llm:
@@ -57,7 +57,7 @@ his:
 api:
   host: 0.0.0.0
   port: 8000
-  cors_origins: ["*"]
+  cors_origins: ["http://localhost:3000", "http://localhost:8501"]
   websocket_enabled: true
 
 # Observability Configuration

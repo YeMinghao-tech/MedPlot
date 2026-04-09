@@ -1,8 +1,11 @@
 """Entity extractor for medical conversation analysis."""
 
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -195,7 +198,8 @@ class EntityExtractor:
             if m:
                 try:
                     return handler(m)
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"Duration extraction handler failed: {e}")
                     return m.group(0)
         return None
 

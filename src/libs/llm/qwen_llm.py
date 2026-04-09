@@ -1,8 +1,18 @@
 """Qwen LLM implementation using DashScope."""
 
-from typing import Any, Dict, List, Optional
+import logging
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from src.libs.llm.base_llm import BaseLLM
+
+logger = logging.getLogger(__name__)
+
+# Exceptions that should trigger a retry
+RETRYABLE_EXCEPTIONS: Tuple[Type[Exception], ...] = (
+    TimeoutError,
+    ConnectionError,
+    OSError,
+)
 
 
 class QwenLLM(BaseLLM):
@@ -25,7 +35,7 @@ class QwenLLM(BaseLLM):
         return os.environ.get("DASHSCOPE_API_KEY")
 
     def chat(self, messages: List[Dict[str, Any]], **kwargs) -> str:
-        """Generate a chat response using Qwen.
+        """Generate a chat response using Qwen with retry on failure.
 
         Args:
             messages: List of message dictionaries.
@@ -42,29 +52,62 @@ class QwenLLM(BaseLLM):
                 "Install it with: pip install dashscope"
             )
 
-        # Convert messages to DashScope format
-        dashscope_messages = self._convert_messages(messages)
+        # Retry logic with exponential backoff
+        max_retries = 3
+        initial_delay = 2.0
+        backoff_factor = 2.0
 
-        # Set API key if available
-        if self.api_key:
-            import os
+        last_exception = None
+        for attempt in range(max_retries + 1):
+            try:
+                # Convert messages to DashScope format
+                dashscope_messages = self._convert_messages(messages)
 
-            os.environ["DASHSCOPE_API_KEY"] = self.api_key
-            dashscope.api_key = self.api_key
+                # Set API key if available
+                if self.api_key:
+                    import os
 
-        response = dashscope.Generation.call(
-            model=self.model,
-            messages=dashscope_messages,
-            result_format="message",
-            **kwargs,
-        )
+                    os.environ["DASHSCOPE_API_KEY"] = self.api_key
+                    dashscope.api_key = self.api_key
 
-        if response.status_code != 200:
-            raise RuntimeError(
-                f"DashScope API error: {response.code} - {response.message}"
-            )
+                response = dashscope.Generation.call(
+                    model=self.model,
+                    messages=dashscope_messages,
+                    result_format="message",
+                    request_timeout=30,
+                    **kwargs,
+                )
 
-        return response.output.choices[0].message.content
+                if response.status_code != 200:
+                    # Check if error is retryable (5xx errors)
+                    if response.code and str(response.code).startswith('5'):
+                        raise RuntimeError(
+                            f"DashScope API error: {response.code} - {response.message}"
+                        )
+                    # Non-retryable error (4xx)
+                    raise RuntimeError(
+                        f"DashScope API error: {response.code} - {response.message}"
+                    )
+
+                return response.output.choices[0].message.content
+
+            except RETRYABLE_EXCEPTIONS as e:
+                last_exception = e
+                if attempt < max_retries:
+                    delay = min(initial_delay * (backoff_factor ** attempt), 30.0)
+                    logger.warning(
+                        f"LLM attempt {attempt + 1}/{max_retries + 1} failed: {e}. "
+                        f"Retrying in {delay:.1f}s..."
+                    )
+                    import time
+                    time.sleep(delay)
+                else:
+                    logger.error(f"All {max_retries + 1} LLM attempts failed")
+                    raise
+
+        if last_exception:
+            raise last_exception
+        raise RuntimeError("LLM call failed after retries")
 
     def _convert_messages(self, messages: List[Dict[str, Any]]) -> List[Dict]:
         """Convert messages to DashScope format."""

@@ -1,11 +1,14 @@
 """Router for dispatching tools based on intent and state."""
 
+import logging
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 
 from src.agent.planner.intent_classifier import Intent, IntentClassifier
 from src.agent.planner.state_manager import State, StateManager
 from src.core.trace import TraceContext, get_current_trace
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -172,8 +175,8 @@ class Router:
                     for i, r in enumerate(results[:3], 1):
                         response_parts.append(f"{i}. {r.text[:200]}...")
                     return "\n".join(response_parts)
-            except Exception:
-                pass  # Fall through to LLM
+            except Exception as e:
+                logger.warning(f"RAG query failed, falling back to LLM: {e}")
 
         # Fall back to LLM if RAG not available or failed
         if self.llm:
@@ -249,12 +252,12 @@ class Router:
 
 请用自然、亲切的中文回复，引导患者继续描述症状或询问相关问题。不要列出选项，直接回复。"""
 
-                print(f"[DEBUG] _handle_consultation: calling LLM with prompt...")
+                logger.debug("_handle_consultation: calling LLM with prompt...")
                 response = self.llm.chat([{"role": "user", "content": prompt}])
-                print(f"[DEBUG] _handle_consultation: LLM response received: {response[:100]}...")
+                logger.debug(f"_handle_consultation: LLM response received: {response[:100]}...")
                 return response.strip()
             except Exception as e:
-                print(f"[ERROR] _handle_consultation: LLM call failed: {e}")
+                logger.error(f"_handle_consultation: LLM call failed: {e}")
                 import traceback
                 traceback.print_exc()
                 # Fall through to rule-based response
@@ -267,7 +270,7 @@ class Router:
                 )
 
         # Fallback to rule-based response
-        print(f"[DEBUG] _handle_consultation: using fallback response (llm={self.llm})")
+        logger.debug(f"_handle_consultation: using fallback response (llm={self.llm})")
         return (
             f"了解了。{len(patient_state.symptoms) if patient_state and patient_state.symptoms else 0}个症状已记录。\n"
             "请继续描述：\n"

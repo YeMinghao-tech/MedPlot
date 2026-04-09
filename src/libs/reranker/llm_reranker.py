@@ -63,8 +63,9 @@ Only respond with a number between 0 and 1."""
             match = re.search(r"0?\.\d+|1\.0|1", response.strip())
             if match:
                 return float(match.group())
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to get LLM rerank score: {e}")
         return 0.5  # Default score if parsing fails
 
     def get_model_name(self) -> str:
