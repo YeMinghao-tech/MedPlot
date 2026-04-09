@@ -15,15 +15,18 @@
 | C-2 | Auth 中间件是空壳 | 实现基于 `MEDPILOT_API_KEY` 环境变量的 Bearer Token 验证 | ✅ 已完成 |
 | C-3 | 无容器化配置 | 添加 Dockerfile、docker-compose.yml、.env.example、.dockerignore | ✅ 已完成 |
 
-### Major (6/13 完成)
+### Major (9/13 完成)
 
 | # | 问题 | 修复方案 | 状态 |
 |---|------|----------|------|
 | M-1 | CORS 全开 | `config/settings.yaml` 中 `cors_origins` 改为 `["http://localhost:3000", "http://localhost:8501"]` | ✅ 已完成 |
 | M-3 | LLM 调用无超时 | `qwen_llm.py` 中 `dashscope.Generation.call` 添加 `request_timeout=30` | ✅ 已完成 |
+| M-4 | 全局可变单例状态 | Router 初始化移至 app.py lifespan，使用 app.state 管理 | ✅ 已完成 |
+| M-5 | 患者列表接口是假实现 | 调用 SemanticMemory.list_patients 实现分页 | ✅ 已完成 |
 | M-6 | Bare except 静默吞异常 | 所有 `except Exception: print()` 替换为 `logger.warning/error` + 适当处理 | ✅ 已完成 |
 | M-7 | 无输入验证 | 新增 `src/api/models/chat.py` 的 `ChatMessage` Pydantic 模型，添加长度验证 (1-5000) | ✅ 已完成 |
 | M-8 | 无外部服务重试 | 新增 `src/libs/utils/retry.py`，QwenLLM 添加指数退避重试 (3次, 2s/4s/8s) | ✅ 已完成 |
+| M-9 | Trace 模块为空 | `src/observability/trace/__init__.py` 正确导出 TraceContext 等 | ✅ 已完成 |
 | M-10 | 调试 print 残留 | `chat.py` 和 `router.py` 中所有 `print(f"[DEBUG]...")` 替换为 `logger.debug/info/error` | ✅ 已完成 |
 
 ---
@@ -51,14 +54,11 @@
 | C-2 | JWT 验证 | 生产环境应实现完整的 JWT 验证逻辑 |
 | C-3 | 生产部署 | 需要配置生产级 docker-compose（监控、日志持久化等） |
 
-### Major (7/13)
+### Major (4/13)
 
 | # | 问题 | 建议方案 |
 |---|------|----------|
 | M-2 | 患者 PII 数据未加密 | SQLite 添加 encryption extension 或迁移至加密存储服务 |
-| M-4 | 全局可变单例状态 | `chat.py` 的 `_router_instance` 改为依赖注入或生命周期管理 |
-| M-5 | 患者列表接口是假实现 | 实现完整的患者 CRUD 或标记为 TODO |
-| M-9 | Trace 模块为空 | 统一 `src/observability/trace/__init__.py` 导出 |
 | M-2 | LLM/HIS 无重试 | HIS 服务添加重试（需在 HISFactory 中实现） |
 | M-6 | 部分异常仍静默 | `router.py` 中 RAG 失败的异常已被日志记录，但不影响响应 |
 | M-10 | 其他文件仍有 print | 需要检查 `src/tools/` 等其他目录 |
@@ -74,16 +74,16 @@
 | N-8 | WorkingMemory 无持久化 | 添加 Redis 或文件持久化 |
 | N-9 | SemanticMemory 全量加载 | 实现 SQL WHERE 子句过滤 |
 
-### Minor (0/6)
+### Minor (1/6)
 
 | # | 问题 | 建议方案 |
 |---|------|----------|
 | L-1 | StateManager 非线程安全 | 添加 asyncio.Lock |
 | L-2 | 无 RequestID 链路追踪 | 实现请求级别 trace_id |
-| L-3 | logs/ 未加入 .gitignore | 添加 logs/ 到 .gitignore |
+| L-3 | logs/ 未加入 .gitignore | ✅ 已完成 |
 | L-4 | 类型注解不完整 | 补充类型注解 |
 | L-5 | 无 requirements.lock | 使用 `pip-compile` 生成锁文件 |
-| L-6 | 模块导出不一致 | 统一 `src/observability/trace/__init__.py` |
+| L-6 | 模块导出不一致 | ✅ 已完成（Trace 模块） |
 
 ---
 

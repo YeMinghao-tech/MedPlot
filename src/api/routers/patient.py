@@ -87,17 +87,21 @@ async def delete_patient(patient_id: str) -> dict:
 
 
 @router.get("")
-async def list_patients(limit: int = 100) -> List[dict]:
-    """List all patients (simplified listing).
-
-    Note: SemanticMemory doesn't support listing all patients.
-    This endpoint is a placeholder that returns an empty list.
-    For full listing, use episodic memory for patient history.
+async def list_patients(limit: int = 100, offset: int = 0) -> dict:
+    """List all patients.
 
     Args:
         limit: Maximum number of patients to return.
+        offset: Number of patients to skip for pagination.
 
     Returns:
-        Empty list (listing not implemented).
+        Dict with patients list and pagination info.
     """
-    return []
+    memory = get_semantic_memory()
+    patients = memory.list_patients(limit=limit, offset=offset)
+
+    return {
+        "patients": patients,
+        "limit": limit,
+        "offset": offset,
+    }
