@@ -54,14 +54,14 @@
 | C-2 | JWT 验证 | 生产环境应实现完整的 JWT 验证逻辑 |
 | C-3 | 生产部署 | 需要配置生产级 docker-compose（监控、日志持久化等） |
 
-### Major (4/13)
+### Major (5/13 完成)
 
-| # | 问题 | 建议方案 |
-|---|------|----------|
-| M-2 | 患者 PII 数据未加密 | SQLite 添加 encryption extension 或迁移至加密存储服务 |
-| M-2 | LLM/HIS 无重试 | HIS 服务添加重试（需在 HISFactory 中实现） |
-| M-6 | 部分异常仍静默 | `router.py` 中 RAG 失败的异常已被日志记录，但不影响响应 |
-| M-10 | 其他文件仍有 print | 需要检查 `src/tools/` 等其他目录 |
+| # | 问题 | 修复方案 | 状态 |
+|---|------|----------|------|
+| M-2 | 患者 PII 数据未加密 | SQLite 添加 encryption extension 或迁移至加密存储服务 | ⏳ 未完成 |
+| M-2 | LLM/HIS 无重试 | HIS 服务添加重试（需在 HISFactory 中实现） | ⏳ 未完成 |
+| M-6 | 部分异常仍静默 | 所有异常处理添加 exc_info=True 记录完整堆栈 | ✅ 已完成 |
+| M-10 | 其他文件仍有 print | ✅ 已完成（src/ 目录已无 print） | ✅ 已完成 |
 
 ### Medium (5/9 完成)
 

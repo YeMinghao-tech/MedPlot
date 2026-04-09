@@ -176,7 +176,7 @@ class Router:
                         response_parts.append(f"{i}. {r.text[:200]}...")
                     return "\n".join(response_parts)
             except Exception as e:
-                logger.warning(f"RAG query failed, falling back to LLM: {e}")
+                logger.warning(f"RAG query failed, falling back to LLM: {e}", exc_info=True)
 
         # Fall back to LLM if RAG not available or failed
         if self.llm:
@@ -257,9 +257,7 @@ class Router:
                 logger.debug(f"_handle_consultation: LLM response received: {response[:100]}...")
                 return response.strip()
             except Exception as e:
-                logger.error(f"_handle_consultation: LLM call failed: {e}")
-                import traceback
-                traceback.print_exc()
+                logger.error(f"_handle_consultation: LLM call failed: {e}", exc_info=True)
                 # Fall through to rule-based response
                 return f"[LLM错误: {e}] " + (
                     f"了解了。{len(patient_state.symptoms) if patient_state and patient_state.symptoms else 0}个症状已记录。\n"
