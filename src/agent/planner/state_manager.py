@@ -1,5 +1,6 @@
 """State manager for dialog flow."""
 
+import threading
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, Dict, Any
@@ -105,6 +106,7 @@ class StateManager:
         self.current_state = State.GREETING
         self.patient_state = PatientState()
         self.transition_history = []
+        self._lock = threading.Lock()
 
     def transition(self, intent: Intent, context: Optional[Dict[str, Any]] = None) -> State:
         """Determine next state based on current state and intent.
@@ -116,24 +118,25 @@ class StateManager:
         Returns:
             Next state.
         """
-        context = context or {}
+        with self._lock:
+            context = context or {}
 
-        # Red flag is terminal - stay in red flag state
-        if intent == Intent.RED_FLAG:
-            self.current_state = State.RED_FLAG
-            return self.current_state
-
-        # Find valid transition
-        valid_next_states = self.TRANSITIONS.get(self.current_state, [])
-
-        for transition in valid_next_states:
-            if self._matches_intent(intent, transition.trigger, context):
-                self._record_transition(transition)
-                self.current_state = transition.to_state
+            # Red flag is terminal - stay in red flag state
+            if intent == Intent.RED_FLAG:
+                self.current_state = State.RED_FLAG
                 return self.current_state
 
-        # No matching transition - stay in current state
-        return self.current_state
+            # Find valid transition
+            valid_next_states = self.TRANSITIONS.get(self.current_state, [])
+
+            for transition in valid_next_states:
+                if self._matches_intent(intent, transition.trigger, context):
+                    self._record_transition(transition)
+                    self.current_state = transition.to_state
+                    return self.current_state
+
+            # No matching transition - stay in current state
+            return self.current_state
 
     def _matches_intent(self, intent: Intent, trigger: str, context: Dict[str, Any]) -> bool:
         """Check if intent matches trigger."""
@@ -163,9 +166,10 @@ class StateManager:
 
     def reset(self):
         """Reset to initial state."""
-        self.current_state = State.GREETING
-        self.patient_state = PatientState()
-        self.transition_history = []
+        with self._lock:
+            self.current_state = State.GREETING
+            self.patient_state = PatientState()
+            self.transition_history = []
 
     def get_state(self) -> State:
         """Get current state."""

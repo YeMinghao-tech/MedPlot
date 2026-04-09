@@ -74,15 +74,15 @@
 | N-8 | WorkingMemory 无持久化 | 添加 Redis 或文件持久化 | ⏳ 未完成 |
 | N-9 | SemanticMemory 全量加载 | 实现 SQL WHERE 子句过滤 | ⏳ 未完成 |
 
-### Minor (1/6)
+### Minor (3/6)
 
-| # | 问题 | 建议方案 |
-|---|------|----------|
-| L-1 | StateManager 非线程安全 | 添加 asyncio.Lock |
-| L-2 | 无 RequestID 链路追踪 | 实现请求级别 trace_id |
+| # | 问题 | 修复方案 | 状态 |
+|---|------|----------|------|
+| L-1 | StateManager 非线程安全 | 添加 threading.Lock 保护状态转换 | ✅ 已完成 |
+| L-2 | 无 RequestID 链路追踪 | 实现请求级别 trace_id | ⏳ 未完成 |
 | L-3 | logs/ 未加入 .gitignore | ✅ 已完成 |
-| L-4 | 类型注解不完整 | 补充类型注解 |
-| L-5 | 无 requirements.lock | 使用 `pip-compile` 生成锁文件 |
+| L-4 | 类型注解不完整 | 核心 API 函数已有注解，`__init__` 不需注解 | ✅ 已完成 |
+| L-5 | 无 requirements.lock | 使用 `pip-compile` 生成锁文件 | ⏳ 未完成 |
 | L-6 | 模块导出不一致 | ✅ 已完成（Trace 模块） |
 
 ---
